@@ -26,7 +26,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--format", choices=("h5", "npz"), default="h5",
                    help="output format (default: h5)")
     p.add_argument("--n-channels", type=int, default=None,
-                   help="explicit channel depth (default: 16384)")
+                   help="explicit channel depth (default: 16384); if the max observed "
+                        "channel exceeds it, snaps up to the next power of 2")
     p.add_argument("--dtype", choices=("uint32", "uint16"), default="uint32",
                    help="cube dtype (default: uint32)")
     p.add_argument("--metadata", default=None,

@@ -36,7 +36,8 @@ metadati di output): `rebin(size, how=sum|mean)`.
 - `schema_version` (int) — versione di questo documento.
 - `format`: "xml" \| "data-only".
 - `source_file`: basename del file sorgente.
-- `n_channels` (int), `dtype` (str), `n_events` (int).
+- `n_channels` (int, profondità effettiva — dopo eventuale snap a potenza di 2,
+  vedi anomalia `n_channels_snapped`), `dtype` (str), `n_events` (int).
 - `units`: `{x: "µm", y: "µm", velocity: "µm/s"}` + `units_status:
   "assumed"\|"confirmed"` (l'XML non le dichiara — conferma N4).
 - `grid`: `{x_min, x_max, x_step, y_min, y_max, y_step,
@@ -47,7 +48,7 @@ metadati di output): `rebin(size, how=sum|mean)`.
   calibrato (dopo `with_calibration`).
 - `raw`: tutti i campi XML (A) o i campi esterni (B).
 - `anomalies`: lista delle anomalie di validazione (dangling marker, colonne
-  mancanti, …) — nessuna viene corretta silenziosamente.
+  mancanti, `n_channels_snapped`, …) — nessuna viene corretta silenziosamente.
 - `transforms`: lista delle trasformazioni applicate post-read — vuota nella
   pipeline core (vedi §Rebin).
 - `software`, `created_utc`.

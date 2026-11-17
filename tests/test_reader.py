@@ -78,15 +78,38 @@ def test_format_b_with_external_metadata_equals_a(tmp_path):
     assert da.metadata["velocity"] == db.metadata["velocity"] == 8000
 
 
-def test_channel_exceeds_n_channels(tmp_path):
+def test_n_channels_snaps_to_next_power_of_two(tmp_path):
     p = tmp_path / "s.a.txt"
     write_format_a(p, GRID32, [(0, 0, [100])])
-    with pytest.raises(XRFReadError, match="n_channels"):
-        read_raw(p, n_channels=50)
+    ds = read_raw(p, n_channels=50)  # max channel 100 >= 50 -> snap to 128
+    assert ds.img.shape == (2, 3, 128)
+    assert int(ds.img.sum()) == 1 and ds.n_events == 1
+    assert ds.metadata["n_channels"] == 128
+    sn = [a for a in ds.metadata["anomalies"] if a["type"] == "n_channels_snapped"]
+    assert len(sn) == 1 and sn[0]["requested"] == 50 and sn[0]["effective"] == 128
+    assert sn[0]["max_channel"] == 100
     r = inspect_raw(p, n_channels=50)
     assert r["ok"]
     assert any(a["type"] == "channel_exceeds_n_channels" and a["max_channel"] == 100
                for a in r["anomalies"])
+
+
+def test_n_channels_kept_when_it_fits(tmp_path):
+    p = tmp_path / "s.b.txt"
+    write_format_b(p, [(0, 0, [100])])
+    ds = read_raw(p, n_channels=200)  # fits: explicit value respected, no snap
+    assert ds.img.shape[2] == 200
+    assert not any(a["type"] == "n_channels_snapped" for a in ds.metadata["anomalies"])
+
+
+def test_n_channels_snap_at_power_of_two_boundary(tmp_path):
+    p = tmp_path / "s.b.txt"
+    write_format_b(p, [(0, 0, [128])])  # max channel 128
+    ds = read_raw(p, n_channels=128)  # 128 >= 128 -> snap to 256
+    assert ds.img.shape[2] == 256 and int(ds.img.sum()) == 1
+    ds2 = read_raw(p, n_channels=256)  # 256 > 128 -> fits, kept
+    assert ds2.img.shape[2] == 256
+    assert not any(a["type"] == "n_channels_snapped" for a in ds2.metadata["anomalies"])
 
 
 def test_x_header_outside_declared_grid(tmp_path):

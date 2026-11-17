@@ -153,3 +153,15 @@ Append-only, dated decisions and changes. Entry format:
   `metadata: {}` + `id` (uuid) a tutte le 10 celle; write atomico
   (tmp+rename) contro read a metà. VALIDATO col Python del Jupyter di
   questo host (nbformat 5.11.1).
+- 2026-11-17 — EMENDAMENTO contratto NC (segnalato utente: `n_channels=2048`
+  → `XRFReadError: max observed channel 15902 >= n_channels 2048`): se il max
+  canale osservato >= n_channels, invece dell'errore snap verso l'ALTO alla
+  potenza di 2 successiva (profondità MCA = potenza di 2, es. 15902 →
+  2^14 = 16384); valore esplicito rispettato se il dato ci sta dentro; snap
+  dichiarato come anomalia `n_channels_snapped` {requested, effective,
+  max_channel} + print. Helper `_next_pow2` in reader.py; help CLI, docstring,
+  output_schema aggiornati. AGENTS.md non modificabile (file protetto,
+  approvazione non data) — emendamento tracciato qui. Test: 49 passed
+  (+3 snap, -1 vecchio raise). E2E mappa11 con n_channels=2048: shape
+  (76,286,16384), sum==n_events==19 825 090, wall 17.1 s, RAM 1.44 GB.
+  Notebook: outputs delle run (incl. quella fallita) rimossi, VALID.

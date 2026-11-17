@@ -15,7 +15,7 @@ import numpy as np
 
 from .dataset import Dataset
 from .data import read_raw
-from .processing import rebin, with_calibration
+from .processing import rebin, rebin_to as rebin_to_depth, with_calibration
 
 
 def _arrays(ds: Dataset) -> dict:
@@ -26,7 +26,7 @@ def _arrays(ds: Dataset) -> dict:
     return a
 
 
-def _attrs(ds: Dataset) -> dict:
+def _attrs(ds: Dataset, compress: int) -> dict:
     """Scalar fields for the HDF5 root attrs / NPZ 'attrs' JSON (output_schema)."""
     meta = ds.metadata
     attrs = {
@@ -39,6 +39,7 @@ def _attrs(ds: Dataset) -> dict:
         "software": meta["software"],
         "created_utc": meta["created_utc"],
     }
+    attrs["compression"] = compress
     cal = meta.get("calibration")
     if cal:
         attrs["calibration_m"] = cal["m"]
@@ -46,28 +47,38 @@ def _attrs(ds: Dataset) -> dict:
     return attrs
 
 
-def write_dataset(ds: Dataset, path, fmt: str = "h5", overwrite: bool = False) -> Path:
-    """Write ``ds`` to ``path`` as .h5 or .npz (atomic, no silent overwrite)."""
+def write_dataset(ds: Dataset, path, fmt: str = "h5", compress: int = 4,
+                  overwrite: bool = False) -> Path:
+    """Write ``ds`` to ``path`` as .h5 or .npz (atomic, no silent overwrite).
+
+    compress: gzip level 0..9 for both formats (0 = uncompressed; default 4).
+    """
     path = Path(path)
     if path.exists() and not overwrite:
         raise FileExistsError(f"output already exists: {path} (use overwrite=True)")
     fmt = fmt.lower()
     if fmt not in ("h5", "npz"):
         raise ValueError(f"fmt must be 'h5' or 'npz', got {fmt!r}")
+    if not isinstance(compress, int) or isinstance(compress, bool) or not 0 <= compress <= 9:
+        raise ValueError(f"compress must be an int 0..9 (0 = none), got {compress!r}")
 
     fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".part", dir=path.parent)
     os.close(fd)
     try:
         if fmt == "h5":
+            kw = {} if compress == 0 else {"compression": "gzip", "compression_opts": compress}
             with h5py.File(tmp, "w") as f:
                 for k, v in _arrays(ds).items():
-                    f.create_dataset(k, data=v)
-                f.attrs.update(_attrs(ds))
+                    f.create_dataset(k, data=v, **kw)
+                f.attrs.update(_attrs(ds, compress))
             os.replace(tmp, path)
         else:
             a = _arrays(ds)
-            a["attrs"] = np.array(json.dumps(_attrs(ds), ensure_ascii=False))
-            np.savez(tmp, **a)
+            a["attrs"] = np.array(json.dumps(_attrs(ds, compress), ensure_ascii=False))
+            if compress == 0:
+                np.savez(tmp, **a)
+            else:
+                np.savez_compressed(tmp, **a, compresslevel=compress)
             os.replace(tmp + ".npz", path)  # np.savez appends ".npz"
     except BaseException:
         for p in (tmp, tmp + ".npz"):
@@ -78,15 +89,23 @@ def write_dataset(ds: Dataset, path, fmt: str = "h5", overwrite: bool = False) -
 
 
 def convert_file(src, out_path, *, fmt: str = "h5", n_channels: int | None = None,
-                 dtype: str = "uint32", metadata=None, rebin_spec=None, cal=None,
+                 dtype: str = "uint32", metadata=None, rebin_spec=None,
+                 rebin_to=None, cal=None, compress: int = 4,
                  overwrite: bool = False) -> Dataset:
     """Core pipeline (shared CLI/UI, M5): read_raw -> with_calibration ->
     optional rebin -> write_dataset. Returns the written Dataset.
 
+    n_channels: exact output depth (h, w, n_channels); default 16384.
     cal: None -> apply the dataset's known_calibration when present;
          dict(m=, q=, provenance=) -> apply that one explicitly.
-    rebin_spec: None or (size, "sum" | "mean").
+    rebin_spec: None or (size, "sum" | "mean") — factor-based rebin.
+    rebin_to: None or a target depth in (512, 1024, 2048, 4096, 8192) —
+        (h, w, N) -> (h, w, rebin_to), sum-only, totals preserved;
+        mutually exclusive with rebin_spec.
+    compress: gzip level 0..9 for the output file (0 = none; default 4).
     """
+    if rebin_spec and rebin_to is not None:
+        raise ValueError("pass either rebin_spec or rebin_to, not both")
     kwargs = {"dtype": dtype}
     if n_channels:
         kwargs["n_channels"] = n_channels
@@ -99,5 +118,7 @@ def convert_file(src, out_path, *, fmt: str = "h5", n_channels: int | None = Non
                               provenance=c.get("provenance", "external"))
     if rebin_spec:
         ds = rebin(ds, rebin_spec[0], how=rebin_spec[1])
-    write_dataset(ds, out_path, fmt=fmt, overwrite=overwrite)
+    elif rebin_to is not None:
+        ds = rebin_to_depth(ds, rebin_to)
+    write_dataset(ds, out_path, fmt=fmt, compress=compress, overwrite=overwrite)
     return ds

@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 
 from _synthetic import GRID32, PIXELS, write_format_a, write_format_b
-from xrfraw import Dataset, read_raw, rebin, with_calibration
+from xrfraw import Dataset, read_raw, rebin, rebin_to, with_calibration
 
 
 def _mini_ds(nc=8, dtype=np.uint32, seed=0, mask_all=True):
@@ -131,10 +131,14 @@ def test_rebin_chained_and_calibrated():
     ds = with_calibration(_mini_ds(nc=8, seed=2), 0.25, -0.5, provenance="user")
     out = rebin(rebin(ds, 2), 2)
     assert out.img.shape[2] == 2
-    assert out.calibrated and out.calibration_m == 0.25
-    # energy follows the output channel axis (first index of each group)
-    assert out.energy.tolist() == ds.energy[[0, 4]].tolist()
+    assert out.calibrated
+    # m is rescaled by the total factor (2 * 2): 0.25 * 4 = 1.0; q unchanged
+    assert out.calibration_m == 1.0 and out.calibration_q == -0.5
+    # energy[i] = (m * total_size) * i + q
+    np.testing.assert_array_equal(out.energy, 1.0 * np.arange(2) - 0.5)
     assert [t["size"] for t in out.metadata["transforms"]] == [2, 2]
+    # input not mutated
+    assert ds.calibration_m == 0.25
 
 
 def test_rebin_sum_overflow_guard():
@@ -149,3 +153,40 @@ def test_rebin_sum_overflow_guard():
     out = rebin(ds, 4)
     assert out.img.shape == (3, 4, 1)
     assert int(out.img[0, 0, 0]) == 4_000_000_000
+
+
+# --- rebin_to (target depth, powers of 2, sum-only) -------------------------
+
+def test_rebin_to_shape_and_totals():
+    ds = _mini_ds(nc=1024, seed=4)
+    out = rebin_to(ds, 512)
+    assert out.img.shape == (3, 4, 512)
+    assert int(out.img.sum()) == ds.n_events  # sum rebin preserves totals
+    assert out.metadata["n_channels"] == 512
+    assert out.metadata["transforms"] == [
+        {"type": "rebin", "size": 2, "how": "sum",
+         "n_channels_from": 1024, "n_channels_to": 512}]
+
+
+def test_rebin_to_updates_calibration():
+    ds = with_calibration(_mini_ds(nc=1024, seed=5), 0.5, 1.0, provenance="user")
+    out = rebin_to(ds, 512)  # size 2
+    assert out.img.shape[2] == 512
+    assert out.calibration_m == 1.0 and out.calibration_q == 1.0
+    np.testing.assert_array_equal(out.energy, 1.0 * np.arange(512) + 1.0)
+    assert int(out.img.sum()) == ds.n_events
+
+
+def test_rebin_to_validation():
+    ds = _mini_ds(nc=1024, seed=6)
+    with pytest.raises(ValueError, match="one of"):
+        rebin_to(ds, 100)      # not a power of 2 in the set
+    with pytest.raises(ValueError, match="one of"):
+        rebin_to(ds, 16384)    # power of 2, but not in the set
+    with pytest.raises(ValueError, match="must be <"):
+        rebin_to(ds, 1024)     # equal to current depth: no-op is rejected
+    with pytest.raises(ValueError, match="must be an int"):
+        rebin_to(ds, "512")  # type: ignore[arg-type]
+    ds2 = _mini_ds(nc=1000, seed=7)
+    with pytest.raises(ValueError, match="does not divide"):
+        rebin_to(ds2, 512)

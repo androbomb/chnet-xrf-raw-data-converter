@@ -14,13 +14,14 @@ contratto. Tutte le milestone chiuse.**
 
 - Legge le due varianti di file raw (XML+dati e solo-dati) — grammatica in
   `data_format.md`; valida prima di allocare il cubo (`inspect_raw`).
-- Costruisce il datacube (Y, X, NC) uint32 (opzione uint16) con profondità
-  canali **esplicita** (default strumentale 16384 — UNVERIFIED), conservando
-  i canali finali a zero.
+- Costruisce il datacube (Y, X, n_channels) uint32 (opzione uint16) con
+  profondità **esatta** — l'output è sempre (Y, X, n_channels) — default
+  strumentale 16384 (UNVERIFIED), canali finali a zero.
 - Calibrazione energia come allegato: i conteggi non cambiano (il legacy ne
   perdeva silenziosamente — `legacy_audit.md` L4).
 - Nessun auto-rebinning / auto energy-crop (contratto kickstart); rebin
-  esplicito (sum/mean) solo su richiesta.
+  esplicito (sum/mean) e rebin a profondità target (`rebin_to`) solo su
+  richiesta.
 - Scrive `.h5` o `.npz` con lo stesso schema logico — `output_schema.md`.
 - UI minimale Dash (DARKLY, accent #4196B4, embeddabile in Jupyter):
   `from xrfraw.ui import build_app` (sezione UI).
@@ -40,7 +41,8 @@ silenziosa — `--overwrite` per sostituire):
 ```bash
 xrf-raw-to-h5 FILE_OR_DIR -o OUT_DIR --format h5|npz \
     [--n-channels N] [--dtype uint32|uint16] [--metadata meta.json] \
-    [--rebin N sum|mean] [--overwrite]
+    [--rebin N sum|mean] [--rebin-to 512|1024|2048|4096|8192] \
+    [--compress 0-9] [--overwrite]
 ```
 
 Se m/q sono noti (XML o JSON esterni) la calibrazione viene applicata come
@@ -50,14 +52,15 @@ allegato (`with_calibration`); altrimenti l'output è non calibrato (asse
 API:
 
 ```python
-from xrfraw import inspect_raw, read_raw, with_calibration, rebin
+from xrfraw import inspect_raw, read_raw, with_calibration, rebin, rebin_to
 from xrfraw.io import write_dataset
 
 report = inspect_raw("mappa11.txt")            # validazione, nessuna allocazione
 ds = read_raw("mappa11.txt")                   # (NY, NX, NC) + assi + mask + metadati
 ds = with_calibration(ds, 0.00259259, -0.0355556, provenance="xml")  # conteggi intatti
 ds = rebin(ds, 2)                              # opzionale, esplicito (sum|mean)
-write_dataset(ds, "mappa11.h5", fmt="h5")      # o fmt="npz"; overwrite=False di default
+ds = rebin_to(ds, 2048)                        # opzionale: profondità target
+write_dataset(ds, "mappa11.h5", fmt="h5", compress=4)  # o fmt="npz"; compress 0-9
 ```
 
 UI minimale (Dash, DARKLY, accent #4196B4):

@@ -31,11 +31,13 @@ def test_h5_round_trip_calibrated_rebinned(tmp_path):
         assert f.attrs["n_events"] == ds.n_events
         assert f.attrs["format"] == "xml"
         assert f.attrs["source_file"] == "a.txt"
-        assert f.attrs["calibration_m"] == 1.5
+        # rebin size 2 rescales m (1.5 * 2); q unchanged
+        assert f.attrs["calibration_m"] == 3.0
         assert f.attrs["calibration_q"] == -0.25
+        assert f.attrs["compression"] == 4  # default gzip level
         meta = json.loads(f.attrs["metadata_json"])
         assert meta["schema_version"] == 1
-        assert meta["calibration"] == {"m": 1.5, "q": -0.25, "provenance": "xml"}
+        assert meta["calibration"] == {"m": 3.0, "q": -0.25, "provenance": "xml"}
         assert meta["transforms"] == [{"type": "rebin", "size": 2, "how": "sum",
                                        "n_channels_from": 16, "n_channels_to": 8}]
 
@@ -89,3 +91,41 @@ def test_no_partial_file_on_failure(tmp_path, monkeypatch):
     with pytest.raises(OSError, match="disk full"):
         write_dataset(ds, tmp_path / "o.h5")
     assert list(tmp_path.glob("o.h5*")) == []
+
+
+# --- compress (gzip, both formats) -------------------------------------------
+
+def test_h5_compression_default_and_off(tmp_path):
+    ds = _uncal_ds(tmp_path)
+    out = write_dataset(ds, tmp_path / "c.h5")          # default compress=4
+    with h5py.File(out, "r") as f:
+        assert f["img"].compression == "gzip" and f["img"].compression_opts == 4
+        assert f.attrs["compression"] == 4
+        np.testing.assert_array_equal(f["img"][()], ds.img)
+    out0 = write_dataset(ds, tmp_path / "c0.h5", compress=0)
+    with h5py.File(out0, "r") as f:
+        assert f["img"].compression is None
+        assert f.attrs["compression"] == 0
+
+
+def test_npz_compression(tmp_path):
+    import zipfile
+    ds = _uncal_ds(tmp_path)
+    out = write_dataset(ds, tmp_path / "c.npz", fmt="npz", compress=6)
+    with zipfile.ZipFile(out) as z:
+        assert z.getinfo("img.npy").compress_type == zipfile.ZIP_DEFLATED
+    z = np.load(out)
+    np.testing.assert_array_equal(z["img"], ds.img)
+    attrs = json.loads(z["attrs"].item())
+    assert attrs["compression"] == 6
+    z.close()
+    out0 = write_dataset(ds, tmp_path / "c0.npz", fmt="npz", compress=0)
+    with zipfile.ZipFile(out0) as z:
+        assert z.getinfo("img.npy").compress_type == zipfile.ZIP_STORED
+
+
+def test_compress_validation(tmp_path):
+    ds = _uncal_ds(tmp_path)
+    for bad in (10, -1, "4", True):
+        with pytest.raises(ValueError, match="compress"):
+            write_dataset(ds, tmp_path / f"o{bad}.h5", compress=bad)  # type: ignore[arg-type]

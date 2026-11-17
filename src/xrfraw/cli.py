@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 from . import __version__
 from .io import convert_file
+from .processing import REBIN_TO_TARGETS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -26,14 +27,19 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--format", choices=("h5", "npz"), default="h5",
                    help="output format (default: h5)")
     p.add_argument("--n-channels", type=int, default=None,
-                   help="explicit channel depth (default: 16384); if the max observed "
-                        "channel exceeds it, snaps up to the next power of 2")
+                   help="exact channel depth of the output cube (default: 16384); "
+                        "error if the max observed channel exceeds it")
     p.add_argument("--dtype", choices=("uint32", "uint16"), default="uint32",
                    help="cube dtype (default: uint32)")
     p.add_argument("--metadata", default=None,
                    help="external metadata JSON (grid/calibration; format B needs it)")
     p.add_argument("--rebin", nargs=2, metavar=("SIZE", "HOW"), default=None,
                    help="explicit rebin along channel: SIZE >= 2, HOW sum|mean (default: off)")
+    p.add_argument("--rebin-to", type=int, default=None,
+                   help="rebin channel axis to exact depth (512/1024/2048/4096/8192); "
+                        "sum-only, totals preserved (default: off)")
+    p.add_argument("--compress", type=int, default=4,
+                   help="gzip compression level 0-9 for h5/npz (0 = none; default: 4)")
     p.add_argument("--overwrite", action="store_true",
                    help="replace existing output files")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -43,7 +49,9 @@ def build_parser() -> argparse.ArgumentParser:
 def _convert_one(src: Path, out_dir: Path, args, rebin_spec) -> None:
     convert_file(src, out_dir / f"{src.stem}.{args.format}",
                  fmt=args.format, n_channels=args.n_channels, dtype=args.dtype,
-                 metadata=args.metadata, rebin_spec=rebin_spec, overwrite=args.overwrite)
+                 metadata=args.metadata, rebin_spec=rebin_spec,
+                 rebin_to=args.rebin_to, compress=args.compress,
+                 overwrite=args.overwrite)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -63,6 +71,18 @@ def main(argv: list[str] | None = None) -> int:
                   file=sys.stderr)
             return 2
         rebin_spec = (size, how)
+
+    if args.rebin_to is not None and args.rebin:
+        print("error: pass either --rebin or --rebin-to, not both", file=sys.stderr)
+        return 2
+    if args.rebin_to is not None and args.rebin_to not in REBIN_TO_TARGETS:
+        print(f"error: --rebin-to must be one of {REBIN_TO_TARGETS}, got {args.rebin_to}",
+              file=sys.stderr)
+        return 2
+    if not 0 <= args.compress <= 9:
+        print(f"error: --compress must be an int 0..9, got {args.compress}",
+              file=sys.stderr)
+        return 2
 
     src = Path(args.input)
     if src.is_dir():

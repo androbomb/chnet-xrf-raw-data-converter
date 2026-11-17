@@ -89,11 +89,14 @@ nella milestone M5, dopo M4.
   `legacy_audit.md` §2 e in `scientific_notes.md`.
 - dtype: uint32 per il cubo (default, opzione utente; overflow uint16
   legacy, L10), float64 per griglie energia e aritmetica.
-- NC (n° canali) è sempre esplicita: default strumentale 16384,
-  sovrascrivibile via opzione/metadati — mai `max(observed)+1`. Se il max
-  canale osservato la supera, snap verso l'ALTO alla potenza di 2 successiva
-  (profondità MCA = potenza di 2), dichiarata come anomalia
-  `n_channels_snapped` (emendamento 2026-11-17: prima era errore).
+- NC (n° canali) è la profondità ESATTA del cubo: l'output è sempre
+  (h, w, n_channels); default strumentale 16384, sovrascrivibile via
+  opzione/metadati — mai `max(observed)+1`. Se il max canale osservato la
+  supera, `XRFReadError` con la potenza di 2 successiva come suggerimento
+  (profondità MCA = potenza di 2); per ridurre la profondità si usa il rebin
+  esplicito (`rebin`, o `rebin_to` a profondità target) — niente snap,
+  niente troncamento silenzioso (emendamento 2026-11-17, sostituisce lo
+  snap `n_channels_snapped` dell'emendamento precedente).
 - Rebin: solo se esplicitamente richiesto (sum/mean), off di default,
   dichiarato nei metadati di output; mai auto-applicato.
 - Unità coordinate: µm (X/Y) e µm/s (velocity) — marcate "assumed"

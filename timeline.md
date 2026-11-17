@@ -165,3 +165,16 @@ Append-only, dated decisions and changes. Entry format:
   (+3 snap, -1 vecchio raise). E2E mappa11 con n_channels=2048: shape
   (76,286,16384), sum==n_events==19 825 090, wall 17.1 s, RAM 1.44 GB.
   Notebook: outputs delle run (incl. quella fallita) rimossi, VALID.
+- 2026-11-17 — NUOVO CONTRATTO NC + rebin_to + compressione (richiesta
+  utente: "l'output è (h,w,n_channels) invece che 16383 (o quello trovato)"
+  + keyword per rebinning efficiente N_orig → N_new): `n_channels` comanda
+  la profondità ESATTA del cubo — l'output è sempre (h, w, n_channels);
+  snap `n_channels_snapped` RIMOSso: read_raw → `XRFReadError` con
+  suggerimento della potenza di 2 successiva (inspect_raw resta advisory).
+  Rebin aggiornati: con calibrazione `m *= size`, `q` invariato (asse
+  energia e metadati coerenti); nuova `rebin_to(ds, n_new)` per target
+  {512,1024,2048,4096,8192}, solo sum (totali conservati), n_new < N e
+  divisibilità uniforme. CLI: `--rebin-to`, `--compress 0-9`; output h5
+  (gzip) e npz (zip-deflate) compressi, livello 4 di default, compress=0
+  = none, dichiarato in attr `compression`. Test: 55 passed
+  (+4 rebin_to, +3 compress, -2 snap; asserzioni m aggiornate).

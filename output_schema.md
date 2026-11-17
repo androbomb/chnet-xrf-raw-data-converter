@@ -18,6 +18,7 @@ raw (A/B) → inspect_raw      → report validazione (nessuna allocazione)
 
 Opzionale, esplicito, non di default, **trasformativo** (documentato nei
 metadati di output): `rebin(size, how=sum|mean)`.
+`rebin_to(n_new)` mappa il cubo a una profondità target (potenza di 2).
 
 ## Campi comuni
 
@@ -36,8 +37,8 @@ metadati di output): `rebin(size, how=sum|mean)`.
 - `schema_version` (int) — versione di questo documento.
 - `format`: "xml" \| "data-only".
 - `source_file`: basename del file sorgente.
-- `n_channels` (int, profondità effettiva — dopo eventuale snap a potenza di 2,
-  vedi anomalia `n_channels_snapped`), `dtype` (str), `n_events` (int).
+- `n_channels` (int, profondità ESATTA del cubo — l'output è sempre
+  (NY, NX, n_channels)), `dtype` (str), `n_events` (int).
 - `units`: `{x: "µm", y: "µm", velocity: "µm/s"}` + `units_status:
   "assumed"\|"confirmed"` (l'XML non le dichiara — conferma N4).
 - `grid`: `{x_min, x_max, x_step, y_min, y_max, y_step,
@@ -48,14 +49,18 @@ metadati di output): `rebin(size, how=sum|mean)`.
   calibrato (dopo `with_calibration`).
 - `raw`: tutti i campi XML (A) o i campi esterni (B).
 - `anomalies`: lista delle anomalie di validazione (dangling marker, colonne
-  mancanti, `n_channels_snapped`, …) — nessuna viene corretta silenziosamente.
+  mancanti, …) — nessuna viene corretta silenziosamente. Un canale che
+  supera `n_channels` NON è un'anomalia: errore esplicito al read
+  (`XRFReadError`, con suggerimento della potenza di 2 successiva);
+  `inspect_raw` lo riporta come `channel_exceeds_n_channels` senza raise.
 - `transforms`: lista delle trasformazioni applicate post-read — vuota nella
   pipeline core (vedi §Rebin).
 - `software`, `created_utc`.
 
 ## Rebin (esplicito, opzionale)
 
-`rebin(ds, size, how="sum")` — sull'asse canale, **mai automatico**:
+`rebin(ds, size, how="sum")` — sull'asse canale, **mai automatico**
+(`rebin_to(ds, n_new)` è la variante a profondità target, vedi sotto):
 
 - Gruppi uniformi: richiede `n_channels % size == 0` (errore esplicito, mai
   troncamento silenzioso).
@@ -64,10 +69,17 @@ metadati di output): `rebin(size, how=sum|mean)`.
 - `mean`: media per gruppo (semantica legacy `AdaptiveAvgPool1d`), output
   float64; i totali diventano `n_events/size`.
 - Asse `channel` in output = primo indice di ogni gruppo (`i·size`); se
-  calibrato, `energy` segue gli stessi indici. `n_events` resta il conteggio
-  fisico degli eventi.
+  calibrato, `energy` segue gli stessi indici e m/q vengono aggiornati
+  (`m *= size`, `q` invariato), così asse energia e metadati restano
+  coerenti. `n_events` resta il conteggio fisico degli eventi.
 - Dichiarato in `transforms` come
   `{type: "rebin", size, how, n_channels_from, n_channels_to}`.
+
+`rebin_to(ds, n_new)` — mappa (NY, NX, N) → (NY, NX, n_new) con n_new in
+{512, 1024, 2048, 4096, 8192} (potenze di 2); solo `sum` (i totali sono
+sempre conservati); richiede `n_new < N` e `N % n_new == 0`; m/q aggiornati
+come in `rebin` (size = N/n_new). È il modo esplicito per ridurre la
+profondità del cubo (es. 16384 → 2048) senza perdere eventi.
 
 ## HDF5 (`<nome>.h5`)
 
@@ -75,7 +87,10 @@ metadati di output): `rebin(size, how=sum|mean)`.
   `/mask`.
 - attributi su `/`: `format`, `source_file`, `n_channels`, `dtype`,
   `n_events`, `metadata_json` (str), `calibration_m`, `calibration_q`
-  (se calibrato), `software`, `created_utc`.
+  (se calibrato), `software`, `created_utc`, `compression` (livello gzip
+  0-9, 0 = none).
+- Compressione: tutti i dataset sono gzip (livello 4 di default, parametro
+  `compress` di `write_dataset`); `compress=0` scrive senza compressione.
 
 ## NPZ (`<nome>.npz`)
 

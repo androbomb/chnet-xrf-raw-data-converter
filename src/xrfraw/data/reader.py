@@ -302,9 +302,10 @@ def read_raw(path, *, n_channels: int = DEFAULT_N_CHANNELS, dtype: str = "uint32
              metadata=None, verbose: bool = False) -> Dataset:
     """Read a raw MA-XRF file into a Dataset.
 
-    n_channels: explicit channel depth (default 16384, instrument MCA). If the max
-        observed channel reaches it, snaps UP to the next power of 2 (declared as
-        anomaly `n_channels_snapped`); never derived from max(observed)+1.
+    n_channels: EXACT channel depth of the output cube (default 16384, instrument
+        MCA): the output is always (h, w, n_channels). If the max observed channel
+        reaches it, XRFReadError with the next power of 2 as a hint (the MCA depth
+        is a power of 2). To reduce the depth afterwards use rebin / rebin_to.
     dtype: "uint32" (default) or "uint16" (checked for per-cell overflow).
     metadata: optional path to a JSON with external "grid" / "calibration"
         (needed for format B; conflict-checked against the XML when present).
@@ -316,24 +317,18 @@ def read_raw(path, *, n_channels: int = DEFAULT_N_CHANNELS, dtype: str = "uint32
         raise ValueError(f"dtype must be 'uint32' or 'uint16', got {dtype!r}")
     meta_in = load_metadata(metadata) if metadata is not None else None
 
-    n_channels_requested = n_channels
     scan = _scan(path, n_channels=n_channels, verbose=verbose)
     meta = merge_metadata(scan["header"], meta_in)
-    anomalies: list[dict] = []
     if scan["max_channel"] >= n_channels:
-        # Detector MCA depth is a power of 2: instead of failing, snap UP to the
-        # smallest power of 2 containing every observed channel (no events lost).
-        n_channels = _next_pow2(scan["max_channel"] + 1)
-        print(f"xrfraw: n_channels {n_channels_requested} too small for max observed "
-              f"channel {scan['max_channel']} -> using {n_channels} (next power of 2)")
-        anomalies.append({
-            "type": "n_channels_snapped",
-            "requested": n_channels_requested,
-            "effective": n_channels,
-            "max_channel": scan["max_channel"],
-        })
+        # Exact-depth contract: the output is (h, w, n_channels) and is never
+        # grown from the data. The detector MCA depth is a power of 2, so the
+        # error suggests the next power of 2 that would contain the data.
+        need = _next_pow2(scan["max_channel"] + 1)
+        raise XRFReadError(
+            None, f"max observed channel {scan['max_channel']} >= n_channels {n_channels} "
+                  f"- raise n_channels to at least {need} (next power of 2)")
     grid, grid_source, g_anoms = _resolve_grid(scan, meta)
-    anomalies = anomalies + list(scan["anomalies"]) + g_anoms
+    anomalies = list(scan["anomalies"]) + g_anoms
 
     img, mask = _populate(path, grid=grid, n_channels=n_channels, dtype=np_dtype, verbose=verbose)
     total = int(img.sum())

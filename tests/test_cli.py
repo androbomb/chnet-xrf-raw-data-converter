@@ -29,7 +29,7 @@ def test_cli_happy_path_h5_rebin(tmp_path):
         img = f["img"][()]
         assert img.shape == (2, 3, 8)
         assert int(img.sum()) == 8  # rebin sum preserves totals
-        assert f.attrs["calibration_m"] == 1.5  # calibrated from XML m/q
+        assert f.attrs["calibration_m"] == 3.0  # XML m=1.5, rescaled by rebin 2
         assert f["energy"][()].shape == (8,)
         meta = json.loads(f.attrs["metadata_json"])
         assert meta["transforms"][0]["type"] == "rebin"
@@ -93,3 +93,22 @@ def test_cli_batch_dir_and_overwrite(tmp_path):
     assert r.returncode == 1 and "exists" in r.stderr
     assert run(d, "-o", tmp_path / "out", "--n-channels", 16,
                "--overwrite").returncode == 0
+
+
+def test_cli_rebin_to_and_compress(tmp_path):
+    a = tmp_path / "a.txt"
+    write_format_a(a, GRID32, PIXELS)
+    r = run(a, "-o", tmp_path / "out", "--rebin-to", "2048", "--compress", "6")
+    assert r.returncode == 0, r.stderr
+    with h5py.File(tmp_path / "out" / "a.h5", "r") as f:
+        img = f["img"][()]
+        assert img.shape == (2, 3, 2048)
+        assert int(img.sum()) == 8  # sum rebin preserves totals
+        assert f.attrs["calibration_m"] == 1.5 * 8  # m rescaled by the rebin size
+        assert f.attrs["compression"] == 6
+        assert f["img"].compression == "gzip"
+    # --rebin and --rebin-to are mutually exclusive; targets are powers of 2
+    assert run(a, "-o", tmp_path / "out2", "--rebin", "2", "sum",
+               "--rebin-to", "2048").returncode == 2
+    assert run(a, "-o", tmp_path / "out2", "--rebin-to", "100").returncode == 2
+    assert run(a, "-o", tmp_path / "out2", "--compress", "10").returncode == 2

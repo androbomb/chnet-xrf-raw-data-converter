@@ -18,7 +18,8 @@ pipeline E2E sui file reali (M4: F1/F7) chiusi; UI minimale in M5.
 | CLI batch | KEEP (loop semplice, niente pool) | fix L6, L12 |
 | UI minimale (Dash, embeddabile in Jupyter) | **ADD — milestone tardiva** dopo il converter core | kickstart goal 6 + Q1 ("ma dopo") |
 | `pandas` / `torch` / JAX | **REMOVE** | mai importati / N/A (L11) |
-| PyPI / TestPyPI / push | **OUT** | vietato in questa fase (utente) |
+| PyPI / TestPyPI | **OUT** | vietato in questa fase (utente) |
+| git push → origin | **IN** | consentito dal 2026-11-17 (utente); push a ogni milestone |
 
 ## 2. API pubblica (entry points del kickstart)
 
@@ -54,7 +55,7 @@ rebin(ds, size, how="sum"|"mean") -> Dataset
 │   └── ui/                # UI minimale Dash (M5, dopo il core)
 ├── tests/                 # pytest: sintetici, invarianze, round-trip
 ├── deploy/                # ricetta backend (uv verificata; altre NOT TESTED)
-├── .github/workflows/     # ci.yml (M6, UNVERIFIED — no push)
+├── .github/workflows/     # ci.yml (M6, UNVERIFIED)
 ├── pyproject.toml         # hatchling, src layout, uv; deps: numpy, h5py, tqdm
 ├── (9 documenti)
 └── original_code/         # gitignored, sola lettura, MAI importato
@@ -85,7 +86,7 @@ rebin(ds, size, how="sum"|"mean") -> Dataset
   conferma calibrazione, sceglie formato, scarica output. Test headless.
 - **M6**: packaging (hatchling wheel/sdist locale), deploy recipe con status
   (uv verificata; docker/apptainer/wslc NOT TESTED — no daemon qui),
-  `ci.yml` preparato ma UNVERIFIED (no push), **niente** PyPI/TestPyPI.
+  `ci.yml` preparato ma UNVERIFIED, **niente** PyPI/TestPyPI.
 
 ## 5. Criteri di accettazione
 
@@ -128,7 +129,8 @@ README (stato onesto: verified vs UNVERIFIED).
 ## 7. Deferred / fuori scope
 
 - JAX, Jupyter inline (oltre l'embedding dell'UI), GPU.
-- Pubblicazione PyPI/TestPyPI, git push → vietati in questa fase.
+- Pubblicazione PyPI/TestPyPI → vietata in questa fase. Git push verso
+  origin: consentito, a ogni chiusura milestone (emendamento 2026-11-17).
 - Parallelismo batch multi-processo (pool legacy) → DEFER (loop semplice).
 
 ## 8. Domande risolte (Q1-Q8, risposte utente 2026-11-17)

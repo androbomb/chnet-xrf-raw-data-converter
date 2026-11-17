@@ -66,6 +66,10 @@ User request (2026-11-17, Telegram):
 > che richiede esempi o conferma dell'utente. Non pubblicare su PyPI, non
 > fare push e non eliminare il legacy.]"
 
+**Emendamento contratto (2026-11-17, utente)**: il push verso GitHub
+(origin) è **consentito** — si pusha a ogni chiusura milestone; resta
+**bloccato solo il push verso PyPI/TestPyPI**.
+
 Goal: una libreria + CLI snella e testata che converte raw MA-XRF
 (Fi MA-XRF, INFN-CHNet) in NPZ/HDF5 (cubo `(y, x, channel)` + assi + mask +
 metadati), con calibrazione energia element-identical (`energy[i]=m·i+q`,
@@ -131,11 +135,12 @@ user decision N2): when it lands, Dash 4.x + JupyterDash and the
 
 ## 9. Safety and honesty
 
-- No fabricated output. If a step cannot be verified here (no Docker daemon,
-  no `gh` CLI, no push allowed), say so and mark it NOT VERIFIED /
-  NOT TESTED.
-- PyPI releases are immutable: never reuse a published version. Publishing
-  is forbidden in this phase — local builds only.
+- No fabricated output. If a step cannot be verified here (no Docker
+  daemon, no `gh` CLI), say so and mark it NOT VERIFIED / NOT TESTED.
+- Git push verso origin: **consentito** (emendamento 2026-11-17) — push a
+  ogni chiusura milestone.
+- PyPI/TestPyPI releases are immutable: never reuse a published version.
+  PyPI publishing remains **forbidden** in this phase — local builds only.
 - Do not touch files the user modified that are out of scope.
 
 ## 10. End-of-task report

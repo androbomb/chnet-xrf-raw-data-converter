@@ -82,3 +82,7 @@ Append-only, dated decisions and changes. Entry format:
   (run proof: sum identico, 1022 MB, peak 2.97 GB per accumulo uint32 +
   downcast by design). No-overwrite rifiutato in uso reale. Commit M4.
   (evidence: to_do.md verification log M4; output/*.h5)
+- 2026-11-17 — Emendamento contratto (utente): push verso GitHub
+  (origin) consentito — push a ogni chiusura milestone; resta bloccato
+  solo PyPI/TestPyPI. AGENTS.md/operational_plan/README/to_do aggiornati;
+  prima push dell'intera history (M0-M4) verso origin.

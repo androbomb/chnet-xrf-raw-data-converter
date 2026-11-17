@@ -12,7 +12,7 @@
 
 ## Later
 - [ ] M5: UI minimale Dash (DARKLY, #4196B4, JupyterDash)
-- [ ] M6: packaging + deploy recipe (no PyPI, no push)
+- [ ] M6: packaging + deploy recipe (no PyPI)
 
 ## Blocked
 - (nessuno)

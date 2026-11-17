@@ -67,8 +67,7 @@ write_dataset(ds, "mappa11.h5", fmt="h5")      # o fmt="npz"; overwrite=False di
   (`legacy_audit.md`); crash legacy sul formato B riprodotto (ParseError,
   2026-11-17).
 - **UNVERIFIED**: NC strumentale 16384 (N1); unità µm/µm/s (N4); deploy
-  docker/apptainer/wslc (NOT TESTED, no daemon in questo ambiente); CI (M6,
-  no push).
+  docker/apptainer/wslc (NOT TESTED, no daemon in questo ambiente); CI (M6).
 
 ## Layout e repo map
 

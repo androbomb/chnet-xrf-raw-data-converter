@@ -145,3 +145,11 @@ Append-only, dated decisions and changes. Entry format:
   "knob" (fmt, n_channels, dtype, metadata, rebin_spec, cal,
   overwrite). Verificato sul sintetico (formato B): shape (2,3,16384),
   sum==n_events==8.
+- 2026-11-17 — FIX notebook unreadable (segnalato utente: "File Load Error,
+  missing expected key: metadata"): le due celle API inserite in a7cdb14
+  mancavano della chiave `metadata` obbligatoria per cella (schema
+  v4.5); `strip_transient` crashava su `cell.metadata` e il reader
+  mascherava l'errore come "notebook senza metadata". Aggiunte
+  `metadata: {}` + `id` (uuid) a tutte le 10 celle; write atomico
+  (tmp+rename) contro read a metà. VALIDATO col Python del Jupyter di
+  questo host (nbformat 5.11.1).

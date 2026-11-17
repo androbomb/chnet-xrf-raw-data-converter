@@ -401,6 +401,10 @@ def inspect_raw(path, *, n_channels: int = DEFAULT_N_CHANNELS, dtype: str = "uin
     nx = (grid["x_max"] - grid["x_min"]) // grid["x_step"] + 1
     ny = (grid["y_max"] - grid["y_min"]) // grid["y_step"] + 1
     itemsize = np.dtype(dtype).itemsize
+    cal = _calibration_block(scan, meta, meta_in)
+    if cal:
+        # mirror read_raw(): known but NOT applied calibration block
+        meta = {**meta, "known_calibration": cal}
     return {
         "path": str(path),
         "format": scan["fmt"],

@@ -1,7 +1,8 @@
 # raw-xrf-to-h5-opener-python — operational plan
 
-Status: M4 (2026-11-17) — lettore (M1), processing (M2), io/CLI (M3) e
-pipeline E2E sui file reali (M4: F1/F7) chiusi; UI minimale in M5.
+Status: M5 (2026-11-17) — lettore (M1), processing (M2), io/CLI (M3),
+pipeline E2E sui file reali (M4: F1/F7) e UI minimale Dash (M5) chiusi;
+packaging/deploy in M6.
 
 ## 1. Scope (KEEP / REMOVE / ADD / DEFER)
 
@@ -81,9 +82,11 @@ rebin(ds, size, how="sum"|"mean") -> Dataset
   wall time, RAM peak, incroci (eventi == sum(img); max cella → overflow
   uint16; calibrazione su mappa11 → vettore energia), report anomalie
   (77/1 pixel non acquisiti). Accettazione: F1, F7.
-- **M5**: UI minimale Dash (DARKLY, accent #4196B4, embeddabile via
-  JupyterDash): carica TXT/XML, mostra validazione/metadati, imposta/
-  conferma calibrazione, sceglie formato, scarica output. Test headless.
+- **M5 (chiuso)**: UI minimale Dash (DARKLY, accent #4196B4, embeddabile
+  con `app.run(jupyter_mode="inline")`): carica TXT (A/B), mostra
+  validazione/metadati/calibrazione nota, imposta m/q (provenance user),
+  sceglie formato, scarica output. Pipeline condivisa `io.convert_file`
+  (CLI + UI). Test headless + server smoke (49 test: 47 fast + 2 slow).
 - **M6**: packaging (hatchling wheel/sdist locale), deploy recipe con status
   (uv verificata; docker/apptainer/wslc NOT TESTED — no daemon qui),
   `ci.yml` preparato ma UNVERIFIED, **niente** PyPI/TestPyPI.

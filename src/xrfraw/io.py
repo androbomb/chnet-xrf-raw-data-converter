@@ -1,4 +1,4 @@
-"""Write Dataset to NPZ/HDF5 (M3) — contract in output_schema.md.
+"""Write Dataset to NPZ/HDF5 (M3) + core conversion pipeline (M5).
 
 No silent overwrite (FileExistsError), atomic write via temp file + rename.
 """
@@ -14,6 +14,8 @@ import h5py
 import numpy as np
 
 from .dataset import Dataset
+from .data import read_raw
+from .processing import rebin, with_calibration
 
 
 def _arrays(ds: Dataset) -> dict:
@@ -73,3 +75,29 @@ def write_dataset(ds: Dataset, path, fmt: str = "h5", overwrite: bool = False) -
                 os.unlink(p)
         raise
     return path
+
+
+def convert_file(src, out_path, *, fmt: str = "h5", n_channels: int | None = None,
+                 dtype: str = "uint32", metadata=None, rebin_spec=None, cal=None,
+                 overwrite: bool = False) -> Dataset:
+    """Core pipeline (shared CLI/UI, M5): read_raw -> with_calibration ->
+    optional rebin -> write_dataset. Returns the written Dataset.
+
+    cal: None -> apply the dataset's known_calibration when present;
+         dict(m=, q=, provenance=) -> apply that one explicitly.
+    rebin_spec: None or (size, "sum" | "mean").
+    """
+    kwargs = {"dtype": dtype}
+    if n_channels:
+        kwargs["n_channels"] = n_channels
+    if metadata:
+        kwargs["metadata"] = metadata
+    ds = read_raw(src, **kwargs)
+    c = cal if cal is not None else ds.metadata.get("known_calibration")
+    if c:
+        ds = with_calibration(ds, c["m"], c["q"],
+                              provenance=c.get("provenance", "external"))
+    if rebin_spec:
+        ds = rebin(ds, rebin_spec[0], how=rebin_spec[1])
+    write_dataset(ds, out_path, fmt=fmt, overwrite=overwrite)
+    return ds

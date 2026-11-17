@@ -86,3 +86,14 @@ Append-only, dated decisions and changes. Entry format:
   (origin) consentito — push a ogni chiusura milestone; resta bloccato
   solo PyPI/TestPyPI. AGENTS.md/operational_plan/README/to_do aggiornati;
   prima push dell'intera history (M0-M4) verso origin.
+- 2026-11-17 — M5 chiuso: UI minimale Dash `src/xrfraw/ui/app.py`
+  (build_app: DARKLY, accent #4196B4; validazione, metadati,
+  calibrazione nota/imposta, rebin, dtype, download .h5/.npz;
+  embeddabile Jupyter `jupyter_mode="inline"` — example.ipynb). Pipeline
+  condivisa `io.convert_file` tra CLI e UI; `inspect_raw` ora espone
+  `known_calibration` nel report (mirror read_raw). Test headless
+  (componenti/validate/convert h5+npz con cal e rebin) + server smoke
+  (index 200, 2 callback registrati su /_dash-dependencies). Deps:
+  dash>=4.5, dash-bootstrap-components>=2.0.4. Suite: 47 fast + 2 slow.
+  Commit M5, push origin. (evidence: tests/test_ui.py, to_do.md
+  verification log M5)

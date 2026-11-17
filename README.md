@@ -5,9 +5,10 @@ di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC, assi
 spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
 energia come **allegato** (`energy[i] = m·i + q`, conteggi element-identical).
 
-**Status: M4 (2026-11-17) — converter completo (reader A/B, processing,
-writer NPZ/HDF5, CLI) e verificato end-to-end sui 2 file reali (F1/F7);
-UI minimale in M5.**
+**Status: M5 (2026-11-17) — converter completo (reader A/B, processing,
+writer NPZ/HDF5, CLI) verificato end-to-end sui 2 file reali (F1/F7) +
+UI minimale Dash (`xrfraw.ui.build_app`, embeddabile in Jupyter);
+49 test: 47 fast + 2 slow.**
 
 ## Cosa fa
 
@@ -21,8 +22,8 @@ UI minimale in M5.**
 - Nessun auto-rebinning / auto energy-crop (contratto kickstart); rebin
   esplicito (sum/mean) solo su richiesta.
 - Scrive `.h5` o `.npz` con lo stesso schema logico — `output_schema.md`.
-- UI minimale Dash (DARKLY, accent #4196B4, embeddabile in Jupyter) prevista
-  in milestone tardiva (M5), dopo il converter core.
+- UI minimale Dash (DARKLY, accent #4196B4, embeddabile in Jupyter):
+  `from xrfraw.ui import build_app` (sezione UI).
 
 ## Setup (uv)
 
@@ -59,6 +60,20 @@ ds = rebin(ds, 2)                              # opzionale, esplicito (sum|mean)
 write_dataset(ds, "mappa11.h5", fmt="h5")      # o fmt="npz"; overwrite=False di default
 ```
 
+UI minimale (Dash, DARKLY, accent #4196B4):
+
+```python
+from xrfraw.ui import build_app
+
+app = build_app()
+app.run()                          # browser
+app.run(jupyter_mode="inline")     # dentro un notebook (vedi example.ipynb)
+```
+
+Carica raw (formato A o B), mostra report validazione + metadati +
+calibrazione nota, permette di impostare m/q esplicitamente (provenance
+`user`), sceglie dtype/rebin/formato e scarica l'output `.h5`/`.npz`.
+
 ## Verified vs UNVERIFIED
 
 - **Verified (M0)**: grammatica degli input sui 2 file di esempio
@@ -83,6 +98,7 @@ Vedi `operational_plan.md` §3.
 | `scientific_notes.md` | calibrazione, conteggi, assi, precisione |
 | `to_do.md` | Now/Next/Later/Blocked + verification log |
 | `timeline.md` | storico append-only datato |
+| `example.ipynb` | notebook demo UI (Jupyter inline) |
 | `deploy/` | ricetta per backend con status verificato / NOT TESTED |
 | `original_code/` | legacy di riferimento (gitignored, sola lettura) |
 | `data_example/` | 2 file di esempio (gitignored, mai caricati in massa) |

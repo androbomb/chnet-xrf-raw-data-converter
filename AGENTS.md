@@ -129,9 +129,14 @@ nella milestone M5, dopo M4.
 ## 8. Reference-project lessons (applicability)
 
 The generic template ships Dash 4.x/JAX lessons (UI, jupyter_mode,
-cross-selection). The minimal UI is a late milestone (M5, after M4 —
-user decision N2): when it lands, Dash 4.x + JupyterDash and the
-`dash-xrf-visualizer` project hold the verified lessons. No JAX here.
+cross-selection). The minimal UI landed in M5 (2026-11-17, user decision
+N2): `xrfraw.ui.build_app()` (Dash 4.5 + dbc 2.0.4, DARKLY, accent
+#4196B4), embeddabile con `app.run(jupyter_mode="inline")` (nativo Dash
+4.5, no pacchetto `_jupyter` separato); `dash-xrf-visualizer` resta il
+riferimento. Verificato su Dash 4.5: niente `dbc.Code`/`dbc.H4` (usare
+`dash.html`), `dev_tools_offline` è un arg del costruttore (non di
+`run()`), il layout è fatto di oggetti componente (test headless: walk
+via `to_plotly_json()`). No JAX here.
 
 ## 9. Safety and honesty
 

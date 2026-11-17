@@ -13,9 +13,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from . import __version__
-from .data import read_raw
-from .io import write_dataset
-from .processing import rebin, with_calibration
+from .io import convert_file
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -42,19 +40,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _convert_one(src: Path, out_dir: Path, args, rebin_spec) -> None:
-    kwargs = {"dtype": args.dtype}
-    if args.n_channels is not None:
-        kwargs["n_channels"] = args.n_channels
-    if args.metadata:
-        kwargs["metadata"] = args.metadata
-    ds = read_raw(src, **kwargs)
-    cal = ds.metadata.get("known_calibration")
-    if cal:
-        ds = with_calibration(ds, cal["m"], cal["q"], provenance=cal["provenance"])
-    if rebin_spec:
-        ds = rebin(ds, rebin_spec[0], how=rebin_spec[1])
-    write_dataset(ds, out_dir / f"{src.stem}.{args.format}",
-                  fmt=args.format, overwrite=args.overwrite)
+    convert_file(src, out_dir / f"{src.stem}.{args.format}",
+                 fmt=args.format, n_channels=args.n_channels, dtype=args.dtype,
+                 metadata=args.metadata, rebin_spec=rebin_spec, overwrite=args.overwrite)
 
 
 def main(argv: list[str] | None = None) -> int:

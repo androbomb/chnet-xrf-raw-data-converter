@@ -160,8 +160,8 @@ Append-only, dated decisions and changes. Entry format:
   2^14 = 16384); valore esplicito rispettato se il dato ci sta dentro; snap
   dichiarato come anomalia `n_channels_snapped` {requested, effective,
   max_channel} + print. Helper `_next_pow2` in reader.py; help CLI, docstring,
-  output_schema aggiornati. AGENTS.md non modificabile (file protetto,
-  approvazione non data) — emendamento tracciato qui. Test: 49 passed
+  output_schema aggiornati. AGENTS.md aggiornato su approvazione utente
+  (emendamento tracciato anche qui). Test: 49 passed
   (+3 snap, -1 vecchio raise). E2E mappa11 con n_channels=2048: shape
   (76,286,16384), sum==n_events==19 825 090, wall 17.1 s, RAM 1.44 GB.
   Notebook: outputs delle run (incl. quella fallita) rimossi, VALID.

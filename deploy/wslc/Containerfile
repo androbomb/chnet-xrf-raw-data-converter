@@ -1,0 +1,13 @@
+# «APP_NAME» — WSLC recipe (same image as ../docker/). NOT TESTED.
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md ./
+RUN uv sync --frozen --no-dev
+COPY src/ ./src/
+COPY tests/ ./tests/
+
+# CUBE_PATH optional: unset -> app starts empty (upload/link in the UI).
+# Bind-mount the data dir read-only at /data when using it.
+EXPOSE 8765
+CMD ["uv", "run", "python", "-c", "import os; from your_app.data import load_cube; from your_app.ui import build_app; p = os.environ.get('CUBE_PATH') or None; build_app(load_cube(p).array if p else None).run(host='0.0.0.0', port=8765)"]

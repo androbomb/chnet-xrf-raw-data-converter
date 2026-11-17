@@ -1,0 +1,14 @@
+# «APP_NAME» — Apptainer recipe. NOT TESTED.
+# Boots from the Docker image, so build that first:
+#   docker build -t your-app -f deploy/docker/Dockerfile .
+
+Bootstrap: docker
+From: your-app:latest
+
+%labels
+    Description "«APP_NAME» — Dash/JAX visualizer (template)"
+    Maintainer "«YOUR_NAME»"
+
+%runscript
+# CUBE_PATH optional: unset -> app starts empty (upload/link in the UI).
+uv run python -c "import os; from your_app.data import load_cube; from your_app.ui import build_app; p = os.environ.get('CUBE_PATH') or None; build_app(load_cube(p).array if p else None).run(host='0.0.0.0', port=8765)"

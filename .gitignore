@@ -1,0 +1,29 @@
+# Merge with the existing repository .gitignore; do not blindly overwrite it.
+
+# original code
+original_code/
+# example data 
+data_example/
+
+# Python cache, test/build output and local Python environments
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+# added by ale
+.windows-env/
+windows-env/
+
+# Local/editor files
+.DS_Store
+.vscode/
+

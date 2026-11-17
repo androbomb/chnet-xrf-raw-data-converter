@@ -1,0 +1,133 @@
+# AGENTS.md — agent rules
+
+This file tells the coding agent how to work in this repository. Read it fully
+before changing anything.
+
+## 0. Verify paths first (bootstrap step)
+
+- On the first touch, verify the project root and every path the user
+  referenced actually exist on THIS machine (`ls` / `stat`). If a path is
+  missing, stop and ask — do not continue silently on a different path.
+- New or scope-changing work: research first, present a plan, wait for an
+  explicit go-ahead before executing.
+- Respect the user's resource caps (CPU/RAM/GPU) as stated in the session;
+  keep compute within the stated caps and report what you measured. No caps
+  were stated for this project yet; default to single-threaded runs and
+  report wall time + RAM peak for anything over ~100 MB.
+
+## 1. Lean code by default
+
+- The best code is the code never written; take the first option that fully
+  works: existing codebase pattern > stdlib > installed dependency > new code.
+- Before writing, list every place the change must reach: callers, tests,
+  fixtures, config, exports. Check what the change could break.
+- No abstraction, wrapper, option, config, boilerplate or "for later" code
+  nobody asked for. Keep values in the form the platform already gives you.
+- Comment only the why the code cannot show, in one line.
+- Shortcut with a known limit: code comment
+  `shortcut: <the limit>, <when to upgrade>`.
+- Lazy code without its check is unfinished: new non-trivial logic (a branch,
+  a loop, a parser, money or security, a new script) ships with one small
+  test or an assert-based self-check.
+- Bug fix: before editing, grep every caller of the function you touch; fix
+  the root cause once in the shared code.
+- Never cut: validation at trust boundaries, error handling that prevents
+  data loss, security, accessibility, anything the user asked for.
+
+## 2. Bootstrap from legacy (read-only reference)
+
+- `original_code/` is a legacy bootstrap reference: gitignored, examined
+  read-only. Do NOT import from it in the new runtime. Do NOT delete it.
+  It is a REFERENCE, not a scientifically correct implementation: replicate
+  only what `legacy_audit.md` section 2 (differences) approves, and never
+  its silent data loss.
+- The repository is the code repo, not the data location: data paths are
+  runtime variables (CLI args / env vars), never hardcoded absolute paths.
+- On sample data files: examine only metadata and small samples in-session;
+  mass loads (full pipeline runs) only inside an approved milestone (M4).
+
+## 3. Project snapshot (M0 — original requirements verbatim)
+
+User request (2026-11-17, Telegram):
+> "Voglio aggiornare il progetto raw-xrf-to-h5-opener-python, usando il
+> template generico corretto come base organizzativa. Il codice legacy
+> fornito è un riferimento da preservare, non un'implementazione
+> scientificamente corretta da replicare automaticamente. La working
+> directory è SOLO /workspace/exchange/xrf-raw-converter. Il codice
+> originale, da gitignorare dopo averlo analizzato, è in
+> original_code/. In data_example/ trovi due files di esempio, uno XML con
+> metadati e uno 'solo data'. Leggi i file del progetto e le regole
+> applicabili. Inizia con un M0 in sola lettura e restituisci un piano
+> concreto. Dopo l'approvazione, implementa autonomamente entro lo scope
+> concordato, senza richiedere conferme per ogni modifica ordinaria.
+> [Documenti richiesti: AGENTS.md, operational_plan.md, legacy_audit.md,
+> data_format.md, output_schema.md, scientific_notes.md, README.md, to_do.md,
+> timeline.md. M0 deve distinguere ciò che è dimostrato dal codice da ciò
+> che richiede esempi o conferma dell'utente. Non pubblicare su PyPI, non
+> fare push e non eliminare il legacy.]"
+
+Goal: una libreria + CLI snella e testata che converte raw MA-XRF
+(Fi MA-XRF, INFN-CHNet) in NPZ/HDF5 comuni (cubo (X,Y,C) + assi + metadati),
+con calibrazione energia e rebin opzionali. Data paths: argomenti CLI;
+esempi in `data_example/` (gitignored).
+
+## 4. Scientific rigor (invariants — XRF-specific)
+
+- **Conservazione dei conteggi**: nessun passo perde eventi silenziosamente.
+  `populate`: `sum(cube) == n_events`. `calibrate`: somma conservata dentro
+  E_range (binning per somma, mai overwrite — legacy_audit L4). `rebin` sum:
+  somma conservata; `rebin` mean è dichiarata come media per gruppo.
+- Legacy ≠ riferimento scientifico: ogni deviazione documentata in
+  `legacy_audit.md` §2 e in `scientific_notes.md`.
+- dtype: uint32 per il cubo (overflow uint16 legacy, L10), float64 per
+  griglie energia e aritmetica.
+- Ogni quantità derivata dai dati (assi, unità, calibrazioni) ha una fonte
+  documentata: `data_format.md` / `scientific_notes.md`; ciò che è
+  ASSUNTO (es. unità µm) resta marcato finché l'utente non conferma.
+
+## 5. Limited testing discipline
+
+- Every milestone ships with a small pytest suite; UI is N/A (no UI in this
+  repo — see §8).
+- Numerics: property tests for conservation (F2-F4) + hand-computed tiny
+  cases; legacy-semantics parity (mean mode) tested on synthetic data.
+- No browser, no live server needed: everything is callable headless.
+- Record results (date, count, status) in `to_do.md` verification log.
+
+## 6. Resource awareness
+
+- Single-threaded by default (no process pool — legacy pool had bugs, L6/L12).
+- Watch RAM on full-file runs (target: < 1.5 GB peak on the 284 MB file);
+  report what you measured in the verification log.
+
+## 7. Documentation ownership
+
+- `operational_plan.md` = decisions, milestones, acceptance criteria, open
+  questions.
+- `legacy_audit.md` = verified legacy problems + intended differences.
+- `data_format.md` = input grammar. `output_schema.md` = output contract.
+- `to_do.md` = Now / Next / Later / Blocked + verification log.
+- `timeline.md` = dated, append-only decisions and changes.
+- `scientific_notes.md` = conventions with claim/source/date.
+- Keep the README honest: mark UNVERIFIED vs verified.
+
+## 8. Reference-project lessons (applicability)
+
+The generic template ships Dash 4.x/JAX lessons (UI, jupyter_mode,
+cross-selection). **N/A here**: this project has no UI and no JAX. If a UI is
+ever added, the `dash-xrf-visualizer` project holds the verified lessons.
+
+## 9. Safety and honesty
+
+- No fabricated output. If a step cannot be verified here (no Docker daemon,
+  no `gh` CLI, no push allowed), say so and mark it NOT VERIFIED /
+  NOT TESTED.
+- PyPI releases are immutable: never reuse a published version. Publishing
+  is forbidden in this phase — local builds only.
+- Do not touch files the user modified that are out of scope.
+
+## 10. End-of-task report
+
+- Report what changed, what was verified (with real output), what is left.
+- Close with one or two lines: what you skipped or did not check, and the
+  risk the user must know.

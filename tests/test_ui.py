@@ -1,8 +1,10 @@
 """UI: la CLI grafica per convert_file — headless (no server, no browser)."""
 import json
+from pathlib import Path
 
 import h5py
 import numpy as np
+from plotly.utils import PlotlyJSONEncoder
 
 from _synthetic import GRID32, N_EVENTS, PIXELS, write_format_a
 from xrfraw.ui import build_app
@@ -61,6 +63,10 @@ def test_build_app_components():
     # src precompila path_to_file (come build_app(cube) in dash-xrf-visualizer)
     assert _find(app.layout, "in-path")["value"] == "/tmp/a.txt"
     assert _find(app.layout, "in-overwrite")["value"] == ["overwrite"]
+    # src come Path (case del notebook): il layout deve serializzarsi come in serving
+    app_p = build_app(src=Path("/tmp/b.txt"))
+    assert _find(app_p.layout, "in-path")["value"] == "/tmp/b.txt"
+    json.dumps(app_p.layout.to_plotly_json(), cls=PlotlyJSONEncoder)
 
 
 def test_run_convert_h5_roundtrip(tmp_path):

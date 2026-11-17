@@ -62,10 +62,10 @@ def run_convert(path, out_path, fmt, nc, dtype, meta, rebin_spec, rebin_to,
                  f"{out.stat().st_size / 1e6:.1f} MB in {dt:.1f} s")
 
 
-def build_app(src: str | None = None) -> dash.Dash:
+def build_app(src: str | Path | None = None) -> dash.Dash:
     """Dash app: la CLI grafica per convert_file.
 
-    ``src`` precompila path_to_file (il notebook lo passa come
+    ``src`` (str o Path) precompila path_to_file (il notebook lo passa come
     dash-xrf-visualizer con build_app(cube)). Run with app.run(...) or
     app.run(jupyter_mode="inline") inside a notebook.
     """
@@ -109,7 +109,8 @@ def build_app(src: str | None = None) -> dash.Dash:
         ]),
         html.Div(id="load-msg", style={"color": "orange"}),
         _field("path_to_file",
-               dcc.Input(id="in-path", type="text", value=src or "",
+               dcc.Input(id="in-path", type="text",
+                          value=str(src) if src is not None else "",  # Path non e' JSON-serializzabile nel layout
                          placeholder="/path/to/scan.txt (oppure upload / load from link)")),
         html.Br(),
         html.B("Parametri convert_file"),

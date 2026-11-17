@@ -6,6 +6,9 @@ original_code/
 data_example/
 # converted outputs (M4)
 output/
+# notebook demo (example.ipynb)
+demo_out/
+demo_tiny.txt
 
 # Python cache, test/build output and local Python environments
 __pycache__/

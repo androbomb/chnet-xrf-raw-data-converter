@@ -106,3 +106,10 @@ Append-only, dated decisions and changes. Entry format:
   ambiente). Deploy recipe già in place con status onesti (docker/
   apptainer/wslc NOT TESTED). Nessun push PyPI/TestPyPI (contratto).
   Commit M6, push origin. (evidence: to_do.md verification log M6, dist/)
+- 2026-11-17 — `example.ipynb` riscritto: demo CLI + UI embeddata (usa
+  data_example/mappa11.txt reale se presente, altrimenti file sintetico
+  formato B piccolo; CLI via `python -m xrfraw` con la stessa command line
+  del terminale; verifica output con h5py — metadata_json è un attr della
+  root; UI Dash inline). Logica verificata senza Jupyter in scratch
+  (tiny 3×2: shape (2,3,16384), sum(img)=8==n_events, no-overwrite exit
+  1). .gitignore += demo_out/, demo_tiny.txt.

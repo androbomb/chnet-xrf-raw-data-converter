@@ -21,7 +21,7 @@ non c'è, uv se lo scarica da solo.
 ## 2. Crea l'ambiente (dalla root del repo)
 
 ```bash
-uv sync            # .venv/ con le dipendenze runtime (numpy, h5py, tqdm, dash, dbc)
+uv sync            # .venv/ con le dipendenze runtime (numpy, h5py, tqdm, dash, dbc, ipykernel)
 uv sync --dev      # stessa cosa + pytest, se vuoi anche la suite di test
 ```
 
@@ -64,10 +64,10 @@ app.run()        # apre su http://127.0.0.1:8050
 ### Jupyter (`example.ipynb`)
 
 Il notebook gira con qualsiasi kernel in cui `xrfraw` sia importabile.
-Per usare la `.venv` del progetto come kernel Jupyter (una tantum):
+Per usare la `.venv` del progetto come kernel Jupyter (una tantum;
+`ipykernel` è già incluso da `uv sync`):
 
 ```bash
-uv pip install ipykernel          # aggiunge ipykernel solo nella .venv, non in pyproject
 .venv/bin/python -m ipykernel install --user --name xrf-raw \
     --display-name "Python 3.12 (xrf-raw)"
 ```
@@ -85,11 +85,11 @@ Windows PowerShell: attiva prima l'ambiente
 - [x] `uv sync` OK (Python 3.12.16, uv 0.13.7).
 - [x] `xrf-raw-to-h5 --version` → `xrf-raw-to-h5 0.1.0`.
 - [x] `pytest -q` suite fast verde (47 passed, 2 slow deselected).
-- [ ] Kernel Jupyter: comando documentato, NOT TESTED in questo ambiente
-      (nessun Jupyter installato).
+- [x] Kernel Jupyter: `xrf-raw` registrato (2026-11-17, questa macchina:
+      `~/.local/share/jupyter/kernels/xrf-raw` → `.venv` del converter).
 
 ## Result log
 
 | date | python | uv | sync | tests | kernel | notes |
 | ---- | ------ | -- | ---- | ----- | ------ | ----- |
-| 2026-11-17 | 3.12.16 | 0.13.7 | OK | 47 passed (fast, 15 s) | NOT TESTED | percorso primario; wheel 0.1.0 verificato anche in venv pulito (M6) |
+| 2026-11-17 | 3.12.16 | 0.13.7 | OK | 47 passed (fast, 15 s) | OK (xrf-raw) | percorso primario; wheel 0.1.0 verificato anche in venv pulito (M6); ipykernel ora in `pyproject.toml` (dipendenza runtime) |

@@ -125,3 +125,12 @@ Append-only, dated decisions and changes. Entry format:
   contratto (PyPI/TestPyPI bloccati), nota license (campo pyproject
   mancante); docker/apptainer/wslc + Dockerfile/your-app.def:
   "CPU-only JAX" → "CPU-only (numpy)" (il progetto è CPU-only by design).
+- 2026-11-17 — Kernel Jupyter `xrf-raw` (richiesta utente): `ipykernel`
+  ora dipendenza runtime in `pyproject.toml` (entrate in `uv sync`,
+  `uv lock` aggiornato, 47 passed); kernel registrato su questa macchina
+  (`~/.local/share/jupyter/kernels/xrf-raw` → `.venv` del converter).
+  Causa del fallimento osservato in un run dell'utente: notebook aperto
+  col kernel `xrf-viz` di dash-xrf-visualizer (no `xrfraw` nel venv) →
+  aprire `example.ipynb` col kernel `Python 3.12 (xrf-raw)`. Notebook
+  ripulito (rimossi i output di esecuzione sbagliati commitati in
+  0890542); docs UV aggiornati (ipykernel incluso da `uv sync`).

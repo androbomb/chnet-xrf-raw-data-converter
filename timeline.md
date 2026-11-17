@@ -188,3 +188,17 @@ Append-only, dated decisions and changes. Entry format:
   uint16 ha safe-accumulate + overflow check). Test: +test_float_dtypes
   (read float32/float64 + float16 rifiutato), +test_rebin_sum_float32_keeps_dtype,
   test_cli: float32 ora valido, float16 → exit 2.
+- 2026-11-17 — UI riscritta: CLI grafica per convert_file (richiesta
+  utente: "rifacciamo totalmente la UI — minimale per usare la CLI,
+  template grafico della app, via tutto ciò che non serve").
+  build_app(src=None): template dash-xrf-visualizer — upload | load from
+  link | path_to_file (src precompila, come build_app(cube) laggiù) + un
+  input per ogni parametro di convert_file (out_path, fmt, n_channels,
+  dtype, metadata, rebin_spec via size+how, rebin_to, cal m/q, compress,
+  overwrite) + Convert + Download file. Via il tasto Valida e le card
+  report (inspect_raw resta API pubblica, usata da CLI/test). Upload/link
+  scrivono in $TMPDIR/xrfraw_ui e riempiono path_to_file; dispatch su
+  ctx.triggered_id (audit 1 del visualizer); fix run_convert: mkdir della
+  dir di destinazione (write_dataset fa rename atomico su .part).
+  test_ui.py riscritto: 21 ids, prefill src, run_convert h5/npz
+  roundtrip, outpath default in xrfraw_ui.

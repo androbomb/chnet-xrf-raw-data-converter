@@ -65,19 +65,22 @@ ds = rebin_to(ds, 2048)                        # opzionale: profondità target
 write_dataset(ds, "mappa11.h5", fmt="h5", compress=4)  # o fmt="npz"; compress 0-9
 ```
 
-UI minimale (Dash, DARKLY, accent #4196B4):
+UI minimale (Dash, DARKLY, accent #4196B4) — la CLI grafica per
+`convert_file`, con il template grafico di dash-xrf-visualizer:
 
 ```python
+path_to_file = "./data_example/mappa11.txt"
 from xrfraw.ui import build_app
 
-app = build_app()
-app.run()                          # browser
-app.run(jupyter_mode="inline")     # dentro un notebook (vedi example.ipynb)
+app = build_app(src=path_to_file)     # src precompila path_to_file
+app.run()                             # browser
+app.run(jupyter_mode="inline", jupyter_height=800)  # notebook (vedi example.ipynb)
 ```
 
-Carica raw (formato A o B), mostra report validazione + metadati +
-calibrazione nota, permette di impostare m/q esplicitamente (provenance
-`user`), sceglie dtype/rebin/formato e scarica l'output `.h5`/`.npz`.
+Carica il raw (upload, load from link o path_to_file), espone ogni
+parametro di `convert_file` come input (out_path, fmt, n_channels, dtype,
+metadata, rebin_spec, rebin_to, cal m/q, compress, overwrite), **Convert**
+e **Download file** per l'output `.h5`/`.npz`.
 
 ## Verified vs UNVERIFIED
 

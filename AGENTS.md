@@ -137,8 +137,11 @@ nella milestone M5, dopo M4.
 
 The generic template ships Dash 4.x/JAX lessons (UI, jupyter_mode,
 cross-selection). The minimal UI landed in M5 (2026-11-17, user decision
-N2): `xrfraw.ui.build_app()` (Dash 4.5 + dbc 2.0.4, DARKLY, accent
-#4196B4), embeddabile con `app.run(jupyter_mode="inline")` (nativo Dash
+N2, riscritta 2026-11-17 come CLI grafica per `convert_file`):
+`xrfraw.ui.build_app(src=None)` (Dash 4.5 + dbc 2.0.4, DARKLY, accent
+#4196B4; template grafico dash-xrf-visualizer: upload | load from link |
+path_to_file + un input per parametro di convert_file, Convert +
+Download file), embeddabile con `app.run(jupyter_mode="inline")` (nativo Dash
 4.5, no pacchetto `_jupyter` separato); `dash-xrf-visualizer` resta il
 riferimento. Verificato su Dash 4.5: niente `dbc.Code`/`dbc.H4` (usare
 `dash.html`), `dev_tools_offline` è un arg del costruttore (non di

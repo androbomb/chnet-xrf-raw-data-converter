@@ -5,9 +5,9 @@ di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC, assi
 spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
 energia come **allegato** (`energy[i] = m·i + q`, conteggi element-identical).
 
-**Status: M3 (2026-11-17) — reader A/B + processing + writer NPZ/HDF5 + CLI
-implementati e testati (43 fast + 2 slow sui file reali); verifica file reali
-completa a M4.**
+**Status: M4 (2026-11-17) — converter completo (reader A/B, processing,
+writer NPZ/HDF5, CLI) e verificato end-to-end sui 2 file reali (F1/F7);
+UI minimale in M5.**
 
 ## Cosa fa
 
@@ -66,8 +66,7 @@ write_dataset(ds, "mappa11.h5", fmt="h5")      # o fmt="npz"; overwrite=False di
   max canale 15902/15999, griglie, anomalie localizzate); audit del legacy
   (`legacy_audit.md`); crash legacy sul formato B riprodotto (ParseError,
   2026-11-17).
-- **UNVERIFIED**: pipeline sui file reali end-to-end (M4: wall time/RAM
-  output inclusi); NC strumentale 16384 (N1); unità µm/µm/s (N4); deploy
+- **UNVERIFIED**: NC strumentale 16384 (N1); unità µm/µm/s (N4); deploy
   docker/apptainer/wslc (NOT TESTED, no daemon in questo ambiente); CI (M6,
   no push).
 

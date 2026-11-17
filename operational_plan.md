@@ -1,8 +1,7 @@
 # raw-xrf-to-h5-opener-python — operational plan
 
-Status: M3 (2026-11-17) — contratto kickstart assorbito e confermato
-(N1-N4); reader (M1) + processing (M2) + io/CLI (M3) chiusi;
-verifica file reali a M4.
+Status: M4 (2026-11-17) — lettore (M1), processing (M2), io/CLI (M3) e
+pipeline E2E sui file reali (M4: F1/F7) chiusi; UI minimale in M5.
 
 ## 1. Scope (KEEP / REMOVE / ADD / DEFER)
 
@@ -77,7 +76,7 @@ rebin(ds, size, how="sum"|"mean") -> Dataset
   (`--format h5|npz`, `--n-channels`, `--dtype`, `--metadata FILE.json`,
   `--rebin N sum|mean`, no-overwrite) + exit codes + tqdm.
   Accettazione: F5, F6b, F12.
-- **M4**: pipeline completa sui 2 file reali (99/284 MB, single-thread):
+- **M4 (chiuso)**: verifica sui 2 file reali (99/284 MB, single-thread)
   wall time, RAM peak, incroci (eventi == sum(img); max cella → overflow
   uint16; calibrazione su mappa11 → vettore energia), report anomalie
   (77/1 pixel non acquisiti). Accettazione: F1, F7.

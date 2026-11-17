@@ -27,8 +27,9 @@ assunto / da verificare.
    (non somma) → output float64 (`np.float`, rimosso in numpy ≥ 2: il legacy
    non gira su numpy moderni). — lettura-codice (raw_reader.py:537-544).
 7. **dtype legacy**: datacube uint16; overflow se una cella (pixel, canale)
-   supera 65 535 eventi. Max per cella negli esempi: **non misurato** —
-   da M4. — lettura-codice (raw_reader.py:293-295).
+   supera 65 535 eventi. Max per cella negli esempi: **17 (mappa11) /
+   1028 (Ragazzo)** → uint16 sicuro su entrambi. — **verificato M4**
+   (pipeline E2E file reali).
 8. **dtype nuovo (decisione Q4)**: datacube **uint32** di default
    (fino a 4.29e9 eventi/cella), opzione `uint16` per compatibilità
    (con pre-check: errore se max cella > 65 535). float64 per griglie

@@ -71,3 +71,14 @@ Append-only, dated decisions and changes. Entry format:
   (`merge_metadata` → MetadataConflictError con i due valori). Suite:
   43 fast + 2 slow; entrypoint verificato E2E su sintetico. Commit M3.
   (evidence: tests/test_io.py, tests/test_cli.py)
+- 2026-11-17 — M4 chiuso: pipeline E2E sui 2 file reali (F1/F7, Q8).
+  CLI single-thread: mappa11 99 MB → 17.1 s, RAM peak 1.40 GB, h5 1425 MB;
+  Ragazzo 284 MB → 43.5 s, RAM peak 1.99 GB, h5 2043 MB. Incroci tutti
+  verdi: sum(img)==n_events (19 825 090 / 56 661 209), mask 21 659/31 174
+  (77/1 px non acquisiti), shape (76,286,16384)/(145,215,16384), energy
+  [-0.035556..42.438846] keV su mappa11 (m/q dal XML, allegato), Ragazzo
+  non calibrato senza energy (formato B, corretto), anomalies nei
+  metadati (3/2) coerenti con M1, max_cell 17/1028 → uint16 safe
+  (run proof: sum identico, 1022 MB, peak 2.97 GB per accumulo uint32 +
+  downcast by design). No-overwrite rifiutato in uso reale. Commit M4.
+  (evidence: to_do.md verification log M4; output/*.h5)

@@ -188,7 +188,7 @@ def test_float_dtypes(tmp_path):
     write_format_b(p, [(0, 0, [1, 1, 2]), (1000, 0, [5])])
     ds = read_raw(p, dtype="float32")
     assert ds.img.dtype == np.float32
-    assert ds.img[0, 0, :3].tolist() == [0.0, 2.0, 1.0] and ds.img[0, 1, 5] == 5.0
+    assert ds.img[0, 0, :3].tolist() == [0.0, 2.0, 1.0] and ds.img[0, 1, 5] == 1.0
     assert int(ds.img.sum()) == 4
     ds64 = read_raw(p, dtype="float64")
     assert ds64.img.dtype == np.float64 and int(ds64.img.sum()) == 4

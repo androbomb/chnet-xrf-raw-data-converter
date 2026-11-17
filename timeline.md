@@ -134,3 +134,9 @@ Append-only, dated decisions and changes. Entry format:
   aprire `example.ipynb` col kernel `Python 3.12 (xrf-raw)`. Notebook
   ripulito (rimossi i output di esecuzione sbagliati commitati in
   0890542); docs UV aggiornati (ipykernel incluso da `uv sync`).
+- 2026-11-17 — `example.ipynb` (sulla versione salvata dall'utente, run
+  verde con kernel xrf-raw): aggiunta sezione "## 2. API Python" con
+  `xrfraw.io.convert_file` (stessa chiamata della CLI, restituisce il
+  `Dataset`); UI rinumerata a "## 3."; intro "tre percorsi". Cella API
+  verificata su mappa11: shape (76,286,16384), sum(img)==n_events
+  19 825 090, coerente con la run CLI.

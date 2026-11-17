@@ -1,7 +1,7 @@
 # Output schema — NPZ / HDF5 comuni
 
-Status: M2 (2026-11-17) — reader A/B + processing (`with_calibration`,
-`rebin`) implementati e testati; writer NPZ/HDF5 e CLI a M3. Principio:
+Status: M3 (2026-11-17) — reader A/B + processing + writer NPZ/HDF5
+(`io.write_dataset`) + CLI implementati e testati (43 fast + 2 slow). Principio:
 l'output è la rappresentazione **fedele** (lossless) del raw: i conteggi
 non vengono mai modificati dalla calibrazione (element-identical); niente
 auto-rebinning né auto energy-crop. NPZ e HDF5 portano gli stessi campi

@@ -5,9 +5,9 @@ di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC, assi
 spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
 energia come **allegato** (`energy[i] = m·i + q`, conteggi element-identical).
 
-**Status: M2 (2026-11-17) — reader A/B + processing
-(`with_calibration`, `rebin`) implementati e testati (32 fast + slow suite
-sui file reali); writer NPZ/HDF5 e CLI a M3.**
+**Status: M3 (2026-11-17) — reader A/B + processing + writer NPZ/HDF5 + CLI
+implementati e testati (43 fast + 2 slow sui file reali); verifica file reali
+completa a M4.**
 
 ## Cosa fa
 
@@ -31,27 +31,32 @@ uv sync
 .venv/bin/python -m pytest -q
 ```
 
-## Uso (reader/processing: API attuale; writer/CLI: M3)
+## Uso
 
-CLI:
+CLI (exit code 0 ok / 1 errori di conversione / 2 usage; nessuna overwrite
+silenziosa — `--overwrite` per sostituire):
 
 ```bash
 xrf-raw-to-h5 FILE_OR_DIR -o OUT_DIR --format h5|npz \
     [--n-channels N] [--dtype uint32|uint16] [--metadata meta.json] \
-    [--rebin N sum|mean]
+    [--rebin N sum|mean] [--overwrite]
 ```
+
+Se m/q sono noti (XML o JSON esterni) la calibrazione viene applicata come
+allegato (`with_calibration`); altrimenti l'output è non calibrato (asse
+`channel`, nessun `energy`).
 
 API:
 
 ```python
 from xrfraw import inspect_raw, read_raw, with_calibration, rebin
-from xrfraw.io import write_dataset  # M3
+from xrfraw.io import write_dataset
 
 report = inspect_raw("mappa11.txt")            # validazione, nessuna allocazione
 ds = read_raw("mappa11.txt")                   # (NY, NX, NC) + assi + mask + metadati
 ds = with_calibration(ds, 0.00259259, -0.0355556, provenance="xml")  # conteggi intatti
 ds = rebin(ds, 2)                              # opzionale, esplicito (sum|mean)
-write_dataset(ds, "mappa11.h5", fmt="h5")      # M3
+write_dataset(ds, "mappa11.h5", fmt="h5")      # o fmt="npz"; overwrite=False di default
 ```
 
 ## Verified vs UNVERIFIED
@@ -61,9 +66,10 @@ write_dataset(ds, "mappa11.h5", fmt="h5")      # M3
   max canale 15902/15999, griglie, anomalie localizzate); audit del legacy
   (`legacy_audit.md`); crash legacy sul formato B riprodotto (ParseError,
   2026-11-17).
-- **UNVERIFIED**: writer/CLI (M3); NC strumentale 16384 (N1); unità µm/µm/s
-  (N4); deploy docker/apptainer/wslc (NOT TESTED, no daemon in questo
-  ambiente); CI (M6, no push).
+- **UNVERIFIED**: pipeline sui file reali end-to-end (M4: wall time/RAM
+  output inclusi); NC strumentale 16384 (N1); unità µm/µm/s (N4); deploy
+  docker/apptainer/wslc (NOT TESTED, no daemon in questo ambiente); CI (M6,
+  no push).
 
 ## Layout e repo map
 

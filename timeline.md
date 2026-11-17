@@ -59,3 +59,15 @@ Append-only, dated decisions and changes. Entry format:
   (`calibration` solo dopo `with_calibration`, secondo output_schema).
   Suite: 32 fast + 2 slow (76 s, file reali F2/F9, RAM peak ~3.3 GB).
   Commit M2. (evidence: tests/test_processing.py, test_real_slow.py)
+- 2026-11-17 — M3 chiuso: io + CLI. `src/xrfraw/io.py`
+  (`write_dataset`: schema output_schema, attributi root HDF5 / array
+  `attrs` JSON in NPZ, `calibration_m/q` solo se calibrato, write atomico
+  temp+rename, no-overwrite silenziosa → FileExistsError, `overwrite=True`
+  esplicito). `src/xrfraw/cli.py` + entrypoint `xrf-raw-to-h5` (pyproject
+  `[project.scripts]`, `python -m xrfraw`): file o directory batch,
+  `--format h5|npz`, `--n-channels`, `--dtype`, `--metadata`, `--rebin N
+  sum|mean`, `--overwrite`, exit 0/1/2, tqdm; calibrazione applicata come
+  allegato quando m/q noti. F12 già presente dal reader M1
+  (`merge_metadata` → MetadataConflictError con i due valori). Suite:
+  43 fast + 2 slow; entrypoint verificato E2E su sintetico. Commit M3.
+  (evidence: tests/test_io.py, tests/test_cli.py)

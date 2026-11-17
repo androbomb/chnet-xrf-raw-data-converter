@@ -10,6 +10,9 @@ dependencies = [
   "tqdm",
 ]
 
+[project.scripts]
+xrf-raw-to-h5 = "xrfraw.cli:main"
+
 [dependency-groups]
 dev = ["pytest"]
 

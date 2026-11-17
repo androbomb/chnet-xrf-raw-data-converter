@@ -1,7 +1,8 @@
 # raw-xrf-to-h5-opener-python — operational plan
 
-Status: M2 (2026-11-17) — contratto kickstart assorbito e confermato
-(N1-N4); reader (M1) + processing (M2) chiusi; writer/CLI a M3.
+Status: M3 (2026-11-17) — contratto kickstart assorbito e confermato
+(N1-N4); reader (M1) + processing (M2) + io/CLI (M3) chiusi;
+verifica file reali a M4.
 
 ## 1. Scope (KEEP / REMOVE / ADD / DEFER)
 
@@ -72,7 +73,7 @@ rebin(ds, size, how="sum"|"mean") -> Dataset
   (element-identical), `rebin` esplicito (sum/mean), opzione uint16 +
   pre-check overflow. Test: casi a mano, conservazione, orientamento,
   canali finali. Accettazione: F2, F3, F4, F9, F10.
-- **M3**: `io.py` (schema output_schema.md) + round-trip + CLI
+- **M3 (chiuso)**: `io.py` (schema output_schema.md) + round-trip + CLI
   (`--format h5|npz`, `--n-channels`, `--dtype`, `--metadata FILE.json`,
   `--rebin N sum|mean`, no-overwrite) + exit codes + tqdm.
   Accettazione: F5, F6b, F12.

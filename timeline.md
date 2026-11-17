@@ -140,3 +140,8 @@ Append-only, dated decisions and changes. Entry format:
   `Dataset`); UI rinumerata a "## 3."; intro "tre percorsi". Cella API
   verificata su mappa11: shape (76,286,16384), sum(img)==n_events
   19 825 090, coerente con la run CLI.
+- 2026-11-17 — Cella API del notebook: tutti i parametri espliciti
+  (nome=valore con default, richiesta utente) — lista completa dei
+  "knob" (fmt, n_channels, dtype, metadata, rebin_spec, cal,
+  overwrite). Verificato sul sintetico (formato B): shape (2,3,16384),
+  sum==n_events==8.

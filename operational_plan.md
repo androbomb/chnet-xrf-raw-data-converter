@@ -1,7 +1,7 @@
 # raw-xrf-to-h5-opener-python — operational plan
 
-Status: M0 v2 (2026-11-17) — contratto kickstart assorbito; **piano in
-attesa di approvazione (N1-N4, §9)**.
+Status: M2 (2026-11-17) — contratto kickstart assorbito e confermato
+(N1-N4); reader (M1) + processing (M2) chiusi; writer/CLI a M3.
 
 ## 1. Scope (KEEP / REMOVE / ADD / DEFER)
 
@@ -64,11 +64,11 @@ rebin(ds, size, how="sum"|"mean") -> Dataset
 
 - **M0 (chiuso)**: audit in sola lettura + 9 documenti v2 (contratto
   kickstart) + misure streaming (eventi, max canale, griglie, anomalie).
-- **M1**: scheletro `src/xrfraw` + layer dati: reader A/B 2-passate, metadati
+- **M1 (chiuso)**: scheletro `src/xrfraw` + layer dati: reader A/B 2-passate, metadati
   XML (escape+parse), inferenza griglia formato B, metadati esterni + regole
   conflitto, `inspect_raw`, errori fuori-range. Test su mini file sintetici.
   Accettazione: F1 (sintetici), F6a, F11.
-- **M2**: processing: `populate` (conservazione), `with_calibration`
+- **M2 (chiuso)**: processing: `populate` (conservazione), `with_calibration`
   (element-identical), `rebin` esplicito (sum/mean), opzione uint16 +
   pre-check overflow. Test: casi a mano, conservazione, orientamento,
   canali finali. Accettazione: F2, F3, F4, F9, F10.

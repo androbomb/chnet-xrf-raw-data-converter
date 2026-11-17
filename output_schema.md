@@ -1,10 +1,11 @@
 # Output schema — NPZ / HDF5 comuni
 
-Status: M0 v2 (2026-11-17) — contratto allineato al kickstart, in attesa di
-approvazione. Principio: l'output è la rappresentazione **fedele** (lossless)
-del raw: i conteggi non vengono mai modificati dalla calibrazione
-(element-identical); niente auto-rebinning né auto energy-crop. NPZ e HDF5
-portano gli stessi campi logici.
+Status: M2 (2026-11-17) — reader A/B + processing (`with_calibration`,
+`rebin`) implementati e testati; writer NPZ/HDF5 e CLI a M3. Principio:
+l'output è la rappresentazione **fedele** (lossless) del raw: i conteggi
+non vengono mai modificati dalla calibrazione (element-identical); niente
+auto-rebinning né auto energy-crop. NPZ e HDF5 portano gli stessi campi
+logici.
 
 ## Pipeline core
 
@@ -22,7 +23,7 @@ metadati di output): `rebin(size, how=sum|mean)`.
 
 | campo | forma/tipo | significato |
 | ----- | ---------- | ----------- |
-| `img` | (NY, NX, NC) uint32 | conteggi eventi per pixel e canale; ordine **(y, x, channel)** |
+| `img` | (NY, NX, NC) uint32 | conteggi eventi per pixel e canale; ordine **(y, x, channel)** (float64 dopo `rebin(mean)` — dichiarato in `transforms`) |
 | `channel` | (NC,) uint32 | indici ADC originali 0..NC−1 — sempre presente |
 | `energy` | (NC,) float64 | **solo se calibrato**: `energy[i] = m·i + q` |
 | `x_axis` | (NX,) float64 | coordinate spaziali X (unità dai metadati) |
@@ -40,13 +41,32 @@ metadati di output): `rebin(size, how=sum|mean)`.
   "assumed"\|"confirmed"` (l'XML non le dichiara — conferma N4).
 - `grid`: `{x_min, x_max, x_step, y_min, y_max, y_step,
   source: "xml"\|"inferred"\|"external"}`.
-- `calibration`: `{m, q, provenance: "xml"\|"external"}` — solo se calibrato.
+- `known_calibration`: `{m, q, provenance}` — solo se m/q noti ma non
+  applicati (dopo `read_raw`, senza `with_calibration`).
+- `calibration`: `{m, q, provenance: "xml"|"external"|"user"}` — solo se
+  calibrato (dopo `with_calibration`).
 - `raw`: tutti i campi XML (A) o i campi esterni (B).
 - `anomalies`: lista delle anomalie di validazione (dangling marker, colonne
   mancanti, …) — nessuna viene corretta silenziosamente.
-- `transforms`: lista delle trasformazioni applicate post-read (es.
-  `rebin(size, how)`) — vuota nella pipeline core.
+- `transforms`: lista delle trasformazioni applicate post-read — vuota nella
+  pipeline core (vedi §Rebin).
 - `software`, `created_utc`.
+
+## Rebin (esplicito, opzionale)
+
+`rebin(ds, size, how="sum")` — sull'asse canale, **mai automatico**:
+
+- Gruppi uniformi: richiede `n_channels % size == 0` (errore esplicito, mai
+  troncamento silenzioso).
+- `sum`: conserva i totali; accumulo esatto in uint64 (safe-accumulation
+  numpy), output uint32; errore esplicito se un gruppo supera 4 294 967 295.
+- `mean`: media per gruppo (semantica legacy `AdaptiveAvgPool1d`), output
+  float64; i totali diventano `n_events/size`.
+- Asse `channel` in output = primo indice di ogni gruppo (`i·size`); se
+  calibrato, `energy` segue gli stessi indici. `n_events` resta il conteggio
+  fisico degli eventi.
+- Dichiarato in `transforms` come
+  `{type: "rebin", size, how, n_channels_from, n_channels_to}`.
 
 ## HDF5 (`<nome>.h5`)
 

@@ -1,9 +1,10 @@
 """Slow tests on the real data_example/ files (run: pytest -m slow)."""
 from pathlib import Path
 
+import numpy as np
 import pytest
 
-from xrfraw import inspect_raw
+from xrfraw import inspect_raw, read_raw
 
 BASE = Path(__file__).resolve().parents[1] / "data_example"
 MAPPA11 = BASE / "mappa11.txt"
@@ -41,3 +42,27 @@ def test_inspect_real_files():
     assert r2["n_pixels_acquired"] == 31_174
     assert any(a["type"] == "dangling_x_marker" and a["at"] == "eof" and a["x"] == 219000
                and a["y_prev"] == 149000 for a in r2["anomalies"])
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not (MAPPA11.is_file() and RAGAZZO.is_file()),
+                    reason="data_example/ files not present")
+def test_read_real_files_totals_mask_and_trailing():
+    # F2 real: sum(img) == n_events; F9 real: channels above max observed zero.
+    # RAM: ~1.4 GB + ~2.0 GB cubes allocated sequentially (uint32, NC=16384).
+    ds = read_raw(MAPPA11)
+    assert ds.img.shape == (76, 286, 16384)  # (y, x, channel)
+    assert ds.img.dtype == np.uint32
+    assert int(ds.img.sum()) == ds.n_events == 19_825_090
+    assert int(ds.mask.sum()) == 21_659  # 286*76 - 77 unacquired pixels
+    assert int(ds.img[..., 15903:].sum()) == 0  # max observed channel 15902
+    assert ds.metadata["known_calibration"] == \
+        {"m": 0.00259259, "q": -0.0355556, "provenance": "xml"}
+    assert not ds.calibrated and ds.energy is None
+
+    ds2 = read_raw(RAGAZZO)
+    assert ds2.img.shape == (145, 215, 16384)
+    assert int(ds2.img.sum()) == ds2.n_events == 56_661_209
+    assert int(ds2.mask.sum()) == 31_174  # 215*145 - 1 unacquired pixel
+    assert int(ds2.img[..., 16000:].sum()) == 0  # max observed channel 15999
+    assert "known_calibration" not in ds2.metadata

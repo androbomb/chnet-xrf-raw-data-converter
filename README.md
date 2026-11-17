@@ -5,9 +5,9 @@ di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC, assi
 spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
 energia come **allegato** (`energy[i] = m·i + q`, conteggi element-identical).
 
-**Status: M0 v2 completato (2026-11-17) — contratto kickstart assorbito,
-piano in attesa di approvazione (N1-N4); nessun codice nuovo ancora**
-(`src/your_app/` è lo scheletro di template, sostituito da `src/xrfraw/` a M1).
+**Status: M2 (2026-11-17) — reader A/B + processing
+(`with_calibration`, `rebin`) implementati e testati (32 fast + slow suite
+sui file reali); writer NPZ/HDF5 e CLI a M3.**
 
 ## Cosa fa
 
@@ -24,14 +24,14 @@ piano in attesa di approvazione (N1-N4); nessun codice nuovo ancora**
 - UI minimale Dash (DARKLY, accent #4196B4, embeddabile in Jupyter) prevista
   in milestone tardiva (M5), dopo il converter core.
 
-## Setup (uv, path primario — da verificare a M1)
+## Setup (uv)
 
 ```bash
 uv sync
 .venv/bin/python -m pytest -q
 ```
 
-## Uso (target M3 — firme esatte a M1)
+## Uso (reader/processing: API attuale; writer/CLI: M3)
 
 CLI:
 
@@ -44,14 +44,14 @@ xrf-raw-to-h5 FILE_OR_DIR -o OUT_DIR --format h5|npz \
 API:
 
 ```python
-from xrfraw.data import inspect_raw, read_raw
-from xrfraw.processing import with_calibration
-from xrfraw.io import write_dataset
+from xrfraw import inspect_raw, read_raw, with_calibration, rebin
+from xrfraw.io import write_dataset  # M3
 
 report = inspect_raw("mappa11.txt")            # validazione, nessuna allocazione
 ds = read_raw("mappa11.txt")                   # (NY, NX, NC) + assi + mask + metadati
-ds = with_calibration(ds, m=0.00259259, q=-0.0355556, provenance="xml")  # conteggi intatti
-write_dataset(ds, "mappa11.h5", fmt="h5")
+ds = with_calibration(ds, 0.00259259, -0.0355556, provenance="xml")  # conteggi intatti
+ds = rebin(ds, 2)                              # opzionale, esplicito (sum|mean)
+write_dataset(ds, "mappa11.h5", fmt="h5")      # M3
 ```
 
 ## Verified vs UNVERIFIED
@@ -61,9 +61,9 @@ write_dataset(ds, "mappa11.h5", fmt="h5")
   max canale 15902/15999, griglie, anomalie localizzate); audit del legacy
   (`legacy_audit.md`); crash legacy sul formato B riprodotto (ParseError,
   2026-11-17).
-- **UNVERIFIED**: tutto il codice (non esiste ancora); NC strumentale 16384
-  (N1); unità µm/µm/s (N4); deploy docker/apptainer/wslc (NOT TESTED, no
-  daemon in questo ambiente); CI (M6, no push).
+- **UNVERIFIED**: writer/CLI (M3); NC strumentale 16384 (N1); unità µm/µm/s
+  (N4); deploy docker/apptainer/wslc (NOT TESTED, no daemon in questo
+  ambiente); CI (M6, no push).
 
 ## Layout e repo map
 

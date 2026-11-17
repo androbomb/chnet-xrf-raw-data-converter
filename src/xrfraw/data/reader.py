@@ -348,7 +348,10 @@ def read_raw(path, *, n_channels: int = DEFAULT_N_CHANNELS, dtype: str = "uint32
     }
     cal = _calibration_block(scan, meta, meta_in)
     if cal:
-        meta_out["calibration"] = cal
+        # Known but NOT applied: with_calibration() is the explicit step that
+        # materializes the energy axis (output_schema.md: calibration/energy
+        # only exist once calibrated).
+        meta_out["known_calibration"] = cal
     if meta.get("velocity") is not None:
         meta_out["velocity"] = float(meta["velocity"])
     raw_extra = {k: v for k, v in meta.items() if k not in {"raw", "m", "q", "grid", "velocity"}}

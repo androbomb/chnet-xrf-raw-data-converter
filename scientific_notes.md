@@ -5,7 +5,8 @@ assunto / da verificare.
 
 1. **Calibrazione energia**: `E(ch) = m·ch + q` con m = `calibration_keV/ch`,
    q = `calibration_Offset` (XML). — fonte: XML mappa11 + `calibrate_xrf`
-   (raw_reader.py:556) — lettura-codice 2026-11-17; verifica numerica a M2.
+   (raw_reader.py:556) — lettura-codice 2026-11-17; **verificato M2**
+   (test: 10 canali a mano, exact float64).
 2. **Semantica eventi**: ogni riga dello stream = 1 evento rilevato (fotone)
    nel canale c; il datacube è l'istogramma per pixel; totali conteggi =
    numero di righe conteggio (19 825 090 / 56 661 209 negli esempi, misurato).
@@ -37,18 +38,21 @@ assunto / da verificare.
    dataset. I conteggi restano **element-identical** (niente resampling,
    niente overwrite, niente crop). Invariante testata:
    `with_calibration(ds).img` bitwise-uguale a `ds.img`; `energy[i] == m*i+q`
-   a 10 canali a mano. — test a M2.
+   a 10 canali a mano. — **verificato M2** (test F3).
 10. **Rebin (contratto kickstart)**: **niente auto-rebinning**. Solo opzione
     esplicita, non di default (`sum` | `mean`), dichiarata come
     trasformazione nei metadati di output (`transforms`). `sum` conserva i
-    totali; `mean` = media per gruppo (semantica legacy). — test a M2.
+    totali; `mean` = media per gruppo (semantica legacy). — **verificato
+    M2** (test F4: sum conserva totali; mean == sum/width per bin).
 11. **Profondità canali (contratto kickstart)**: `NC` = parametro esplicito,
     default strumentale **16384** (suggerito dal legacy
     `rebin_size = 16384//divisor` — **UNVERIFIED**, N1). Mai
     `max(observed)+1`: i due esempi hanno max canale 15902/15999, quindi
-    482/385 canali finali a zero si conservano (parte del MCA). — test F9 a M2.
+    482/385 canali finali a zero si conservano (parte del MCA). — **verificato
+    M2** (test F9 sintetico + file reali).
 12. **Ordine output**: **(y, x, channel)** — differenza intenzionale dal
-    legacy (x, y, channel). Test orientamento asimmetrico (NY ≠ NX). — test F10.
+    legacy (x, y, channel). — **verificato M2** (test F10: griglia asimmetrica
+    NY≠NX con posizioni evento verificate).
 13. **Maschera di acquisizione**: `mask (NY,NX) bool`. Pixel non acquisiti
     (colonna X=290000 assente + riga Y=265000 assente in mappa11; riga
     Y=149000 assente in Ragazzo) = `False` + zero, riportati in `anomalies`.

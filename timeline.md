@@ -47,3 +47,15 @@ Append-only, dated decisions and changes. Entry format:
   rebin esplicito off di default, unità assumed, UI M5, RAM ~1.9 GB),
   9 documenti allineati. Commit M1.
   (evidence: pytest output in to_do.md verification log)
+- 2026-11-17 — M2 chiuso: processing `src/xrfraw/processing.py` —
+  `with_calibration(ds, m, q, *, provenance)`: allegato puro
+  `energy[i] = m·i + q` float64, conteggi bitwise-identici (F3, 10 canali a
+  mano exact); `rebin(ds, size, how="sum")`: gruppi uniformi
+  (`n_channels % size == 0`, errore esplicito), `sum` conserva i totali
+  (accumulo esatto uint64, output uint32, overflow check rigoroso), `mean`
+  = media per gruppo float64 (semantica legacy), asse `channel` = primo
+  indice di ogni gruppo, `n_events` resta fisico, dichiarato in `transforms`
+  (F4). Reader: m/q noti ma non applicati → `known_calibration`
+  (`calibration` solo dopo `with_calibration`, secondo output_schema).
+  Suite: 32 fast + 2 slow (76 s, file reali F2/F9, RAM peak ~3.3 GB).
+  Commit M2. (evidence: tests/test_processing.py, test_real_slow.py)

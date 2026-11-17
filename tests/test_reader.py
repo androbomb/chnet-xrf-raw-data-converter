@@ -24,7 +24,7 @@ def test_read_orientation_and_counts(tmp_path):
     assert ds.channel.tolist()[:3] == [0, 1, 2]
     assert not ds.calibrated and ds.energy is None
     assert ds.metadata["grid_source"] == "declared"
-    assert ds.metadata["calibration"] == {"m": 1.5, "q": -0.25, "provenance": "xml"}
+    assert ds.metadata["known_calibration"] == {"m": 1.5, "q": -0.25, "provenance": "xml"}
     assert ds.metadata["units"] == {"x": "µm", "y": "µm", "velocity": "µm/s"}
     assert ds.metadata["units_status"] == "assumed"
 
@@ -72,7 +72,7 @@ def test_format_b_with_external_metadata_equals_a(tmp_path):
     da = read_raw(pa)
     db = read_raw(pb, metadata=pj)
     assert np.array_equal(da.img, db.img)
-    ca, cb = da.metadata["calibration"], db.metadata["calibration"]
+    ca, cb = da.metadata["known_calibration"], db.metadata["known_calibration"]
     assert (ca["m"], ca["q"]) == (cb["m"], cb["q"]) == (1.5, -0.25)
     assert ca["provenance"] == "xml" and cb["provenance"] == "external"
     assert da.metadata["velocity"] == db.metadata["velocity"] == 8000

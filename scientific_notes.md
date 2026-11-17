@@ -50,8 +50,8 @@ assunto / da verificare.
 12. **Ordine output**: **(y, x, channel)** — differenza intenzionale dal
     legacy (x, y, channel). Test orientamento asimmetrico (NY ≠ NX). — test F10.
 13. **Maschera di acquisizione**: `mask (NY,NX) bool`. Pixel non acquisiti
-    (colonna X=290000 assente in mappa11; marker dangling (5000,265000) e
-    (219000,149000)) = `False` + zero, riportati in `anomalies`. — M0
-    (misure awk), test a M1/M4.
+    (colonna X=290000 assente + riga Y=265000 assente in mappa11; riga
+    Y=149000 assente in Ragazzo) = `False` + zero, riportati in `anomalies`.
+    — M0 (misure awk) + M1 (riprova Python), test a M4.
 14. **Unità**: µm / µm/s ASSUNTE (l'XML non le dichiara) → marcate
     `units_status: assumed` in output finché l'utente non conferma (N4).

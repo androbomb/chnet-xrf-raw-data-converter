@@ -44,9 +44,10 @@ verificato (esecuzione) / lettura-codice / da verificare.
 ## 3. Non verificato (manca in questo ambiente / richiede esecuzione)
 
 - Valore strumentale NC = 16384: suggerito da L7, **da conferma utente (N1)**.
-- Comportamento sui marker X dangling (mappati: (5000,265000) mappa11,
-  (219000,149000) Ragazzo; 0 eventi): proposta "anomalia + mask=False",
-  da conferma.
+- Anomalie di struttura (verificate a M1, data_format.md §4):
+  `missing_row`/`missing_column` + 1 `dangling_x_marker` a fine file per file
+  (mappa11 X(5000), Ragazzo X(219000); 0 eventi). Comportamento reader
+  fissato: "anomalia + mask=False".
 - Max conteggio per cella (pixel, canale) nei due esempi (rischio overflow
   uint16): da misurare a M4.
 - Semantica esatta di `AdaptiveAvgPool1d` su split non uniformi (no torch qui).

@@ -67,9 +67,13 @@ User request (2026-11-17, Telegram):
 > fare push e non eliminare il legacy.]"
 
 Goal: una libreria + CLI snella e testata che converte raw MA-XRF
-(Fi MA-XRF, INFN-CHNet) in NPZ/HDF5 comuni (cubo (X,Y,C) + assi + metadati),
-con calibrazione energia e rebin opzionali. Data paths: argomenti CLI;
-esempi in `data_example/` (gitignored).
+(Fi MA-XRF, INFN-CHNet) in NPZ/HDF5 (cubo `(y, x, channel)` + assi + mask +
+metadati), con calibrazione energia element-identical (`energy[i]=m·i+q`,
+conteggi element-identical, niente resampling), NC esplicita (default
+16384, sovrascrivibile) e rebin esplicito (sum/mean) OFF di default.
+Niente auto-rebin/auto-crop. Data paths: argomenti CLI; esempi in
+`data_example/` (gitignored). UI minimale (Dash, embeddabile in Jupyter)
+nella milestone M5, dopo M4.
 
 ## 4. Scientific rigor (invariants — XRF-specific)
 
@@ -79,16 +83,22 @@ esempi in `data_example/` (gitignored).
   somma conservata; `rebin` mean è dichiarata come media per gruppo.
 - Legacy ≠ riferimento scientifico: ogni deviazione documentata in
   `legacy_audit.md` §2 e in `scientific_notes.md`.
-- dtype: uint32 per il cubo (overflow uint16 legacy, L10), float64 per
-  griglie energia e aritmetica.
+- dtype: uint32 per il cubo (default, opzione utente; overflow uint16
+  legacy, L10), float64 per griglie energia e aritmetica.
+- NC (n° canali) è sempre esplicita: default strumentale 16384,
+  sovrascrivibile via opzione/metadati — mai `max(observed)+1`.
+- Rebin: solo se esplicitamente richiesto (sum/mean), off di default,
+  dichiarato nei metadati di output; mai auto-applicato.
+- Unità coordinate: µm (X/Y) e µm/s (velocity) — marcate "assumed"
+  nei metadati finché non confermate strumentalmente (N4).
 - Ogni quantità derivata dai dati (assi, unità, calibrazioni) ha una fonte
   documentata: `data_format.md` / `scientific_notes.md`; ciò che è
   ASSUNTO (es. unità µm) resta marcato finché l'utente non conferma.
 
 ## 5. Limited testing discipline
 
-- Every milestone ships with a small pytest suite; UI is N/A (no UI in this
-  repo — see §8).
+- Every milestone ships with a small pytest suite; the M5 minimal UI gets
+  headless tests (no browser required, Jupyter-embeddable).
 - Numerics: property tests for conservation (F2-F4) + hand-computed tiny
   cases; legacy-semantics parity (mean mode) tested on synthetic data.
 - No browser, no live server needed: everything is callable headless.
@@ -97,8 +107,9 @@ esempi in `data_example/` (gitignored).
 ## 6. Resource awareness
 
 - Single-threaded by default (no process pool — legacy pool had bugs, L6/L12).
-- Watch RAM on full-file runs (target: < 1.5 GB peak on the 284 MB file);
-  report what you measured in the verification log.
+- Watch RAM on full-file runs (datacube uint32, NC=16384 ≈ 1.9 GB per the
+  284 MB file + streaming overhead); report what you measured in the
+  verification log.
 
 ## 7. Documentation ownership
 
@@ -114,8 +125,9 @@ esempi in `data_example/` (gitignored).
 ## 8. Reference-project lessons (applicability)
 
 The generic template ships Dash 4.x/JAX lessons (UI, jupyter_mode,
-cross-selection). **N/A here**: this project has no UI and no JAX. If a UI is
-ever added, the `dash-xrf-visualizer` project holds the verified lessons.
+cross-selection). The minimal UI is a late milestone (M5, after M4 —
+user decision N2): when it lands, Dash 4.x + JupyterDash and the
+`dash-xrf-visualizer` project hold the verified lessons. No JAX here.
 
 ## 9. Safety and honesty
 

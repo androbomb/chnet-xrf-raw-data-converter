@@ -1,8 +1,9 @@
 # Data format — raw MA-XRF (Fi MA-XRF, INFN-CHNet)
 
-Status: M0 v2 (2026-11-17) — grammatica verificata su 2 file di esempio +
-lettura del codice legacy + 5 passate streaming (awk, mawk-safe). I punti
-marcati «ASSUNTO» richiedono conferma utente (operational_plan.md §9).
+Status: M1 (2026-11-17) — grammatica verificata su 2 file di esempio +
+lettura del codice legacy + 5 passate streaming (awk, mawk-safe) + riprova
+Python (M1) che fissa la struttura esatta delle anomalie (§4). I punti
+marcati «ASSUNTO» richiedono conferma strumentale (operational_plan.md §9).
 
 ## 1. Varianti di file
 
@@ -25,8 +26,9 @@ marcati «ASSUNTO» richiedono conferma utente (operational_plan.md §9).
 
 XML non standard: i nomi dei tag contengono `()`, `/` e spazi; i valori sono
 stringhe quotate. Il legacy riscrive i caratteri prima del parse
-(`custom_escape_parser`, raw_reader.py:451-476); il nuovo reader fa
-l'equivalente (regex o stessa riscrittura — decisione implementativa a M1).
+(`custom_escape_parser`, raw_reader.py:451-476); il nuovo reader parsea
+**riga per riga** con regex sul pattern `<name>"value"</name>` (implementato
+a M1 in `xrfraw/data/meta.py`; niente ET, niente riscrittura dei tag).
 
 | sezione | campo | esempio mappa11 | significato |
 | ------- | ----- | --------------- | ----------- |
@@ -60,11 +62,16 @@ di 1 la cella `(y, x, c)` del datacube.
 - Struttura stream (verificata su entrambi i file): ogni pixel =
   `header X, header Y, eventi…`; **0 eventi orfani** (eventi tra un header X e
   il successivo header Y) su entrambi i file.
-- Ordine di scan: X esterno crescente da Xmin; Y interno crescente da Ymin.
-- **Marcatore X dangling** (anomalia osservata, §4): una colonna può terminare
-  con un header X senza header Y e senza eventi. Comportamento del reader
-  (proposta): anomalia riportata nella validazione; il pixel corrispondente
-  `mask=False` (non acquisito); nessun contributo al totale eventi.
+- Ordine di scan (verificato M1): serpentina, Y esterno crescente da Ymin,
+  X interno — crescente nelle righe dispari, decrescente nelle pari.
+- **Anomalie di struttura** (osservate, §4) — il reader le riporta in
+  `anomalies` e marca i pixel interessati con `mask=False`, senza correzioni
+  silenziose:
+  - `missing_row` / `missing_column`: pixel della griglia assente (mancano
+    gli header Y/X) — caso osservato in entrambi i file;
+  - `dangling_x_marker`: header X non seguito da header Y (duplicato
+    intra-stream, difensivo, o a fine file — quest'ultimo è il caso reale
+    osservato in Ragazzo); nessun evento gli viene attribuito.
 - Vincoli (ASSUNTI): `x, y ≤ 99_999_999` (codifica a 8 cifre); canali
   realisticamente ≤ 16383 (MCA 16384 ch; nei due esempi max ≤ 15999).
 
@@ -85,18 +92,29 @@ di 1 la cella `(y, x, c)` del datacube.
 | eventi orfani | 0 | 0 |
 | pixel acquisiti (coppia X+Y) | 21 659 | 31 174 |
 
-Anomalie misurate:
+Anomalie misurate (riprovate a M1 con sonda Python riga per riga):
 
 - **mappa11**: la colonna dichiarata X=290000 (Xmax) è **assente** dallo scan
-  → 76 pixel non acquisiti.
-- **mappa11**: la colonna x=5000 termina con header X dangling (Y=265000
-  mancante) → pixel (5000, 265000) non acquisito, 0 eventi.
-- **Ragazzo**: la colonna x=219000 termina con header X dangling
-  (Y=149000 mancante) → pixel (219000, 149000) non acquisito, 0 eventi.
-- Entrambi: righe vuote iniziali/finali; nessuna riga evento è orfana.
+  → 76 pixel non acquisiti (`missing_column`, 1 riga di anomalia).
+- **mappa11**: il pixel (5000, 265000) — ultimo pixel dell'ultima riga
+  (riga y=265000 in ordine discendente x=289000→6000, stop a x=6000) — non
+  è acquisito: vista per colonna, la colonna x=5000 ha 75 marker Y
+  (190000..264000) → `missing_row`.
+- **mappa11**: il file termina con il **marker X(5000) di quel pixel non
+  acquisito** (ultima riga di dati `50005000`, poi riga vuota e tag di
+  chiusura) — 0 eventi (`dangling_x_marker`, `at="eof"`): è l'header del
+  pixel mancante, non un marker orfano.
+- **Ragazzo**: il pixel (219000, 149000) — ultimo pixel dell'ultima riga
+  (riga y=149000 in ordine ascendente x=5000→218000, stop a x=218000) — non
+  è acquisito: vista per colonna, la colonna x=219000 ha 144 marker Y
+  (5000..148000) → `missing_row`.
+- **Ragazzo**: il file termina con il **marker X(219000) di quel pixel non
+  acquisito** (ultima riga di dati, subito prima dei tag di chiusura) —
+  0 eventi (`dangling_x_marker`, `at="eof"`).
+- Entrambi: nessuna riga evento orfana; Ragazzo ha una riga vuota in testa.
 
-Totale pixel non acquisiti: mappa11 **77/21 736** (76 colonna + 1 dangling);
-Ragazzo **1/31 175** (dangling).
+Totale pixel non acquisiti: mappa11 **77/21 736** (76 colonna + ultimo
+  pixel ultima riga); Ragazzo **1/31 175** (ultimo pixel ultima riga).
 
 ## 5. Profondità canali (NC)
 

@@ -1,21 +1,23 @@
 # To-do — raw-xrf-to-h5-opener-python
 
 ## Now
-- [ ] Approvazione piano M0 v2 (domande N1-N4, operational_plan.md §9)
+- [x] Approvazione piano M0 v2 (domande N1-N4) — risposte: NC=16384 default
+      sovrascrivibile; UI in M5 di questo repo; rebin esplicito off di default;
+      unità µm/µm/s (assumed)
+- [x] M1: reader A/B 2-passate + metadati + griglia + validazione + test
+      (24 passed: 23 fast + 1 slow sui file reali)
 
 ## Next
-- [ ] M1: scheletro `src/xrfraw` + layer dati (reader A/B 2-passate, metadati,
-      inferenza griglia B, inspect_raw, validazione, regole conflitto) + test
+- [ ] M2: processing (with_calibration / rebin esplicito) + invarianze
 
 ## Later
-- [ ] M2: processing (populate / with_calibration / rebin esplicito) + invarianze
 - [ ] M3: io NPZ/HDF5 (schema v2) + round-trip + CLI
 - [ ] M4: verifica sui 2 file reali (time/RAM/incroci) — Q8
 - [ ] M5: UI minimale Dash (DARKLY, #4196B4, JupyterDash)
 - [ ] M6: packaging + deploy recipe (no PyPI, no push)
 
 ## Blocked
-- (in attesa) risposte N1-N4 — nulla di bloccante sul codice M1
+- (nessuno)
 
 ## Verification log (append; do not rewrite history)
 | date | check | result |
@@ -26,3 +28,6 @@
 | 2026-11-17 | M0 v2: passate awk mawk-safe (5 totali) sui 2 file | max canale 15902/15999; griglie osservate 285×76 / 215×145 (step 1000 uniforme); eventi confermati 19 825 090 / 56 661 209; **0 eventi orfani** in entrambi |
 | 2026-11-17 | M0 v2: localizzazione anomalie (awk per colonna) | mappa11: colonna x=290000 (Xmax) assente (76 px) + marker X dangling (5000, 265000); Ragazzo: marker X dangling (219000, 149000); entrambi 0 eventi → pixel non acquisiti 77/21 736 e 1/31 175 |
 | 2026-11-17 | M0 v2: contratto kickstart assorbito | NC esplicita (default 16384 UNVERIFIED), calibrazione element-identical, ordine (y,x,channel), mask, niente auto-rebin/crop, UI minimale in milestone tardiva; 9 documenti aggiornati |
+| 2026-11-17 | N1-N4 risposte utente | NC=16384 default sovrascrivibile; UI M5 repo; rebin esplicito off di default; unità µm/µm/s marcate assumed |
+| 2026-11-17 | M1: riprova Python struttura anomalie (sonda riga per riga) | scansione serpentina Y-esterno/X-interno (righe dispari X asc., pari X disc.); mappa11: colonna x=290000 assente (76 px) + ultimo pixel ultima riga (5000,265000) non acquisito; Ragazzo: ultimo pixel ultima riga (219000,149000) non acquisito; in entrambi il file termina con l'header X di quel pixel mancante (0 eventi) |
+| 2026-11-17 | M1 close: suite verde + docs + AGENTS.md | `uv run pytest -q` → 23 passed (0.7 s) + `pytest -m slow` → 1 passed (~20 s, file reali); fix: `_to_number` fallback stringa per flag non numerici XML (es. "n"); dangling_x_marker = header del pixel mancante a fine file in entrambi (mappa11 X(5000) y_prev=265000; Ragazzo X(219000) y_prev=149000); AGENTS.md sync (goal, invarianti NC/rebin/unità, test M5, RAM ~1.9 GB, §8 UI M5) |

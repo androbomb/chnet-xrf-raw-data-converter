@@ -28,3 +28,22 @@ Append-only, dated decisions and changes. Entry format:
   orfani; anomalie localizzate: colonna x=290000 assente (mappa11, 76 px),
   marker X dangling (5000,265000) / (219000,149000) a 0 eventi.
   (evidence: to_do.md verification log)
+- 2026-11-17 — N1-N4 risposte utente: NC=16384 default sovrascrivibile;
+  UI minimale in M5 di questo repo (dopo M4); rebin esplicito (sum/mean)
+  off di default, dichiarato nei metadati; unità X/Y=µm e Velocity=µm/s
+  marcate "assumed" finché non confermate strumentalmente.
+  (evidence: chat Telegram 2026-11-17)
+- 2026-11-17 — M1 avvio: venv uv (numpy 2.5.5, h5py, tqdm, pytest); pacchetto
+  `src/xrfraw` (reader 2-passate A/B, metadati XML riga-per-riga, griglia
+  dichiarata/inferita, validazione, inspect_raw, Dataset); test sintetici +
+  slow sui file reali. Riprova Python: scansione serpentina (Y-esterno/
+  X-interno); mappa11 = missing_column x=290000 (76 px) + ultimo pixel
+  ultima riga (5000,265000) non acquisito; Ragazzo = ultimo pixel ultima
+  riga (219000,149000) non acquisito; entrambi finiscono con l'header X del
+  pixel mancante (0 eventi). Documenti aggiornati.
+  (evidence: tests/, data_format.md §4, to_do.md verification log)
+- 2026-11-17 — M1 chiuso: suite verde (23 fast + 1 slow sui file reali),
+  AGENTS.md sincronizzato al contratto kickstart (NC esplicita 16384,
+  rebin esplicito off di default, unità assumed, UI M5, RAM ~1.9 GB),
+  9 documenti allineati. Commit M1.
+  (evidence: pytest output in to_do.md verification log)

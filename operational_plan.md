@@ -153,5 +153,8 @@ README (stato onesto: verified vs UNVERIFIED).
 | N3 | Rebin: mantenere l'opzione esplicita (sum/mean, off di default) o rimuoverla del tutto? | mantenerla |
 | N4 | Unità: X/Y = **µm**, Velocity = **µm/s**? (l'XML non le dichiara) | sì, marcate `assumed` finché non confermato |
 
-Nota minore: marker X dangling (1 per file, 0 eventi) → proposta
-"anomalia riportata + mask=False" (data_format.md §4); sovrascrivibile.
+Nota minore (M1): anomalie di struttura = `missing_row`/`missing_column`
+(77 px mappa11, 1 px Ragazzo) + 1 `dangling_x_marker` a fine file per file
+(mappa11: X(5000); Ragazzo: X(219000); entrambi 0 eventi). Comportamento
+reader: "anomalia riportata + mask=False", niente correzione silenziosa
+(data_format.md §3-4).

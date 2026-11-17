@@ -1,93 +1,122 @@
 # raw-xrf-to-h5-opener-python — operational plan
 
-Status: M0 completo (2026-11-17) — **piano in attesa di approvazione**.
+Status: M0 v2 (2026-11-17) — contratto kickstart assorbito; **piano in
+attesa di approvazione (N1-N4, §9)**.
 
 ## 1. Scope (KEEP / REMOVE / ADD / DEFER)
 
 | item | decisione | perché |
 | ---- | --------- | ------ |
-| Reader raw formato A (XML+dati) | KEEP (ri-implantato) | core; grammatica in data_format.md |
+| Reader raw formato A (XML+dati) | KEEP (ri-implantato, streaming 2-passate) | core; grammatica in data_format.md |
 | Reader raw formato B (solo dati) | **ADD** | il legacy crasha (L1); è presente in data_example |
+| `inspect_raw` (validazione pre-allocazione) | **ADD** | kickstart: validare prima di allocare il cubo |
 | populate eventi → datacube | KEEP (ri-implantato, uint32, streaming) | core; fix L2, L9, L10 |
-| Calibrazione energia | KEEP (ri-implantata, conservativa) | core; fix L3, L4, L5 |
-| Rebin | KEEP (sum/mean, NumPy) | core; drop torch (L11), fix L7 |
-| Writer HDF5 | KEEP (esteso con attributi/assi) | core |
-| Writer NPZ | **ADD** | schema NPZ/HDF5 comune richiesto |
+| Calibrazione energia | KEEP come **allegato** (`energy[i]=m·i+q`, conteggi element-identical) | contratto kickstart; fix L3, L4, L5 |
+| Rebin | **niente automatico**; opzione esplicita (sum/mean) off di default | contratto kickstart; Q3 rifinito |
+| Writer HDF5 | KEEP (esteso: assi, mask, channel, metadata_json) | core |
+| Writer NPZ | **ADD** | schema NPZ/HDF5 comune |
 | CLI batch | KEEP (loop semplice, niente pool) | fix L6, L12 |
-| `pandas` | **REMOVE** | mai importato (L11) |
-| `torch` | **REMOVE** | solo per AdaptiveAvgPool1d (L11) |
-| JAX / Dash / UI / Jupyter | **DEFER** (fuori scope) | questo repo è il converter; l'UI vive in dash-xrf-visualizer (Q1) |
+| UI minimale (Dash, embeddabile in Jupyter) | **ADD — milestone tardiva** dopo il converter core | kickstart goal 6 + Q1 ("ma dopo") |
+| `pandas` / `torch` / JAX | **REMOVE** | mai importati / N/A (L11) |
 | PyPI / TestPyPI / push | **OUT** | vietato in questa fase (utente) |
 
-## 2. Layout (definitivo)
+## 2. API pubblica (entry points del kickstart)
+
+```python
+inspect_raw(path) -> dict
+    # validazione in sola lettura: formato, griglia dichiarata/osservata,
+    # max canale, memoria stimata, anomalie — nessuna allocazione del cubo
+read_raw(path, *, n_channels=16384, dtype="uint32", metadata=None) -> Dataset
+    # 2 passate streaming; griglia dichiarata (A) / inferita (B) / esterna
+    # (metadati JSON); fuori-range → errore esplicito
+with_calibration(ds, m, q, *, provenance) -> Dataset
+    # allega energy[i] = m*i + q; i conteggi restano element-identical
+write_dataset(ds, path, *, fmt="h5"|"npz") -> Path
+    # schema output_schema.md; temp file + rename; no overwrite implicito
+rebin(ds, size, how="sum"|"mean") -> Dataset
+    # ESPLICITO, non di default, trasformativo (documentato in "transforms")
+```
+
+`Dataset` (dataclass): `img (NY,NX,NC)`, `channel (NC,)`, `x_axis`, `y_axis`,
+`mask (NY,NX)`, `metadata` (dict), `format`, `source_file`, `n_events`,
+`energy`, `calibration_m/q`, `calibrated`.
+
+## 3. Layout (definitivo)
 
 ```
 /workspace/exchange/xrf-raw-converter/
 ├── src/xrfraw/
 │   ├── __init__.py        # version; no side effects
-│   ├── data/              # reader formato A/B (streaming) + metadati + validazione
-│   ├── processing/        # populate / calibrate / rebin — NumPy puro, no I/O
+│   ├── data/              # reader A/B 2-passate + metadati + validazione
+│   ├── processing.py      # populate / with_calibration / rebin (NumPy puro)
 │   ├── io.py              # writer NPZ + HDF5 (schema comune)
-│   └── cli.py             # CLI: file singolo + batch, --metadata, --rebin, --E-range
-├── tests/                 # pytest: reader su file sintetici, invarianze, round-trip
-├── deploy/                # ricetta per backend (uv verificata; altre NOT TESTED)
-├── .github/workflows/     # ci.yml (M5, UNVERIFIED — no push)
+│   ├── cli.py             # CLI: file singolo + batch
+│   └── ui/                # UI minimale Dash (M5, dopo il core)
+├── tests/                 # pytest: sintetici, invarianze, round-trip
+├── deploy/                # ricetta backend (uv verificata; altre NOT TESTED)
+├── .github/workflows/     # ci.yml (M6, UNVERIFIED — no push)
 ├── pyproject.toml         # hatchling, src layout, uv; deps: numpy, h5py, tqdm
-├── AGENTS.md / operational_plan.md / legacy_audit.md / data_format.md
-├── output_schema.md / scientific_notes.md / README.md / to_do.md / timeline.md
+├── (9 documenti)
 └── original_code/         # gitignored, sola lettura, MAI importato
 ```
 
-## 3. Technical boundaries
-
-- `data/`: legge solo i file input; nessun altro I/O, niente torch/jax/dash.
-  I path dei dati sono variabili di runtime (argomenti CLI), mai hardcoded.
-- `processing/`: funzioni NumPy pure; uint32 per il cubo, float64 per
-  griglie energia e aritmetica (AGENTS.md §4).
-- `io.py`: unico modulo che scrive output.
-- Dipendenze runtime: `numpy`, `h5py`, `tqdm`. Dev: `pytest`. Niente
-  torch/pandas/JAX/Dash (elementi di template non applicabili a un converter).
-
 ## 4. Milestones
 
-- **M0 (chiuso)**: audit in sola lettura + 9 documenti.
-- **M1**: scheletro `src/xrfraw` + layer dati (reader A/B streaming,
-  container metadati, validazione alla trust boundary) + test su mini file
-  sintetici. Accettazione: F1 (su sintetici), F6a.
-- **M2**: processing: `populate` (conservazione conteggi), `calibrate`
-  (`searchsorted`, conservativa, E_range crop opzionale), `rebin` (sum/mean).
-  Test: casi piccoli a mano + proprietà di conservazione + test
-  compatibilità-semantica-legacy (modo mean) su sintetico. Accettazione: F2-F4.
-- **M3**: `io.py` (NPZ+HDF5, attributi/assi per output_schema.md) + round-trip
-  + CLI (`--format h5|npz`, `--rebin none|sum|mean --rebin-size N`,
-  `--E-range LO HI`, `--metadata FILE.json`) + tqdm. Accettazione: F5, F6b.
-- **M4**: verifica sui 2 file reali (99/284 MB, single-thread): wall time,
-  RAM peak, incroci (totale eventi == somma cubo; max cella → rischio
-  overflow uint16 legacy; pipeline completa con calibrazione su mappa11).
-  Esito nel verification log + README (verified). Accettazione: F1, F7, Q8.
-- **M5**: packaging (build wheel/sdist hatchling locale), deploy recipe con
-  status (uv: verificata; docker/apptainer/wslc: NOT TESTED — no daemon qui),
+- **M0 (chiuso)**: audit in sola lettura + 9 documenti v2 (contratto
+  kickstart) + misure streaming (eventi, max canale, griglie, anomalie).
+- **M1**: scheletro `src/xrfraw` + layer dati: reader A/B 2-passate, metadati
+  XML (escape+parse), inferenza griglia formato B, metadati esterni + regole
+  conflitto, `inspect_raw`, errori fuori-range. Test su mini file sintetici.
+  Accettazione: F1 (sintetici), F6a, F11.
+- **M2**: processing: `populate` (conservazione), `with_calibration`
+  (element-identical), `rebin` esplicito (sum/mean), opzione uint16 +
+  pre-check overflow. Test: casi a mano, conservazione, orientamento,
+  canali finali. Accettazione: F2, F3, F4, F9, F10.
+- **M3**: `io.py` (schema output_schema.md) + round-trip + CLI
+  (`--format h5|npz`, `--n-channels`, `--dtype`, `--metadata FILE.json`,
+  `--rebin N sum|mean`, no-overwrite) + exit codes + tqdm.
+  Accettazione: F5, F6b, F12.
+- **M4**: pipeline completa sui 2 file reali (99/284 MB, single-thread):
+  wall time, RAM peak, incroci (eventi == sum(img); max cella → overflow
+  uint16; calibrazione su mappa11 → vettore energia), report anomalie
+  (77/1 pixel non acquisiti). Accettazione: F1, F7.
+- **M5**: UI minimale Dash (DARKLY, accent #4196B4, embeddabile via
+  JupyterDash): carica TXT/XML, mostra validazione/metadati, imposta/
+  conferma calibrazione, sceglie formato, scarica output. Test headless.
+- **M6**: packaging (hatchling wheel/sdist locale), deploy recipe con status
+  (uv verificata; docker/apptainer/wslc NOT TESTED — no daemon qui),
   `ci.yml` preparato ma UNVERIFIED (no push), **niente** PyPI/TestPyPI.
-  Accettazione: F8.
 
 ## 5. Criteri di accettazione
 
-- **F1**: entrambi i file reali parsati senza errori; eventi == 19 825 090 /
-  56 661 209 (baseline awk, data_format.md §4). — test M4.
-- **F2**: `sum(datacube) == numero eventi` dopo `populate`. — test M2.
-- **F3**: `calibrate`: `sum(out) == sum(in)` dentro E_range; asse energia
-  monotona; caso 10 canali a mano riproduce E = m·ch + q. — test M2.
-- **F4**: `rebin` sum: somma conservata; mean: == somma/larghezza bin
-  (split uniforme) e parità di semantica con il legacy su sintetico. — test M2.
-- **F5**: round-trip NPZ/HDF5: array e attributi identici; leggibili con
-  `h5py` / `np.load`. — test M3.
+- **F1**: i 2 file reali parsati senza errori; eventi == 19 825 090 /
+  56 661 209; `sum(img) == n_events`; pixel non acquisiti 77 (mappa11) /
+  1 (Ragazzo) con `mask=False`. — M1 (sintetici) / M4 (reali).
+- **F2**: `sum(img) == n_events` dopo `populate` (sintetico + reale). — M2/M4.
+- **F3**: `with_calibration`: `img` element-identical (bitwise);
+  `energy[i] == m*i + q`; caso a mano su 10 canali. — M2.
+- **F4**: `rebin` esplicito: `sum` conserva i totali; `mean` ==
+  somma/larghezza bin (split uniforme); trasformazione dichiarata in
+  `transforms`. — M2.
+- **F5**: round-trip NPZ/HDF5: array + `metadata_json` identici; leggibili
+  con `h5py` / `np.load`. — M3.
 - **F6**: (a) formato B senza metadati → cubo in canali grezzi + griglia
-  inferita, nessun crash; (b) formato B + `--metadata` JSON == risultato del
-  formato A con gli stessi metadati (coppia sintetica). — test M2/M3.
-- **F7**: file reale 284 MB: single-thread, RAM peak < 1.5 GB, wall time
-  riportato (target indicativo < 120 s). — log M4.
-- **F8**: nessun import torch/pandas/jax/dash in `src/`; `hatchling` builda
-  wheel+sdist. — M5.
+  inferita, nessun crash; (b) formato B + JSON esterni == formato A con gli
+  stessi metadati (coppia sintetica). — M1/M3.
+- **F7**: file reale 284 MB: single-thread, RAM peak + wall time riportati.
+  Nota: con uint32 e NC=16384 il solo cubo pesa ~1.9 GB (215·145·16384·4);
+  opzione `--dtype uint16` → ~0.95 GB. Target < 1.5 GB raggiungibile solo con
+  uint16. — log M4.
+- **F8**: nessun import torch/pandas/jax in `src/`; hatchling builda
+  wheel+sdist. — M6.
+- **F9**: canali finali: NC=16384 > max osservato →
+  `img[..., max_obs+1:]` tutti zero e presenti (niente troncamento). — M2.
+- **F10**: orientamento: sintetico asimmetrico (NY≠NX) → un evento in
+  (x=2, y=5, c=3) finisce in `img[5, 2, 3]` (y, x, channel). — M2.
+- **F11**: coordinate fuori-range / riga malformed → errore esplicito con
+  numero di riga (niente skip silenziosi). — M1.
+- **F12**: conflitto XML vs metadati esterni → errore esplicito con i due
+  valori; niente overwrite. — M3.
 
 ## 6. Document ownership
 
@@ -98,20 +127,31 @@ README (stato onesto: verified vs UNVERIFIED).
 
 ## 7. Deferred / fuori scope
 
-- UI Dash/Plotly, JAX, Jupyter inline → progetto separato (Q1).
+- JAX, Jupyter inline (oltre l'embedding dell'UI), GPU.
 - Pubblicazione PyPI/TestPyPI, git push → vietati in questa fase.
 - Parallelismo batch multi-processo (pool legacy) → DEFER (loop semplice).
-- GPU → non applicabile (solo NumPy).
 
-## 8. Domande aperte (in attesa di conferma)
+## 8. Domande risolte (Q1-Q8, risposte utente 2026-11-17)
+
+- **Q1** converter CLI/package ora; UI nuova (usabile in exemple.ipynb) dopo. ✓
+- **Q2** calibrazione conservativa → **raffinata dal kickstart**: conteggi
+  element-identical, allegato `energy[i]=m·i+q`, niente crop (D3).
+- **Q3** rebin opzionale → **raffinato dal kickstart**: niente automatico;
+  opzione esplicita off di default (D4, N3).
+- **Q4** dtype come opzione utente, default uint32. ✓ (D5)
+- **Q5** formato B: griglia inferita + metadati esterni opzionali. ✓ (D1)
+- **Q6** import `xrfraw`, dist `raw-xrf-to-h5-opener-python`. ✓
+- **Q7** unità µm/µm/s come default, da chiedere all'utente. ✓ (→ N4)
+- **Q8** M4: pipeline completa sui 2 file reali, single-thread. ✓
+
+## 9. Domande aperte (N1-N4, in attesa di conferma)
 
 | # | Domanda | raccomandazione |
 | - | ------- | --------------- |
-| Q1 | Repo = solo converter (niente UI/JAX/Jupyter)? | sì |
-| Q2 | Calibrazione: E_range default = nessuna crop; binning conservativo (somma nei bin)? | sì |
-| Q3 | Rebin: default `sum`, opzione `mean` per compatibilità legacy? | sì |
-| Q4 | Datacube uint32 (vs uint16 legacy)? | sì |
-| Q5 | Formato B: griglia inferita dagli header + metadati esterni opzionali (JSON) per la calibrazione? | sì |
-| Q6 | Nomi: import `xrfraw`, dist PyPI `raw-xrf-to-h5-opener-python`? | sì |
-| Q7 | Unità assi X/Y = µm (e Velocity µm/s)? l'XML non le dichiara | da conferma |
-| Q8 | M4: esecuzione pipeline completa sui 2 file reali (99/284 MB, single-thread)? | sì |
+| N1 | NC strumentale: confermare **16384** come default? (suggerito dal legacy L7; max canale osservato 15902/15999) | 16384 |
+| N2 | UI minimale: milestone tardiva **di questo repo** (M5) o progetto separato? | M5 di questo repo |
+| N3 | Rebin: mantenere l'opzione esplicita (sum/mean, off di default) o rimuoverla del tutto? | mantenerla |
+| N4 | Unità: X/Y = **µm**, Velocity = **µm/s**? (l'XML non le dichiara) | sì, marcate `assumed` finché non confermato |
+
+Nota minore: marker X dangling (1 per file, 0 eventi) → proposta
+"anomalia riportata + mask=False" (data_format.md §4); sovrascrivibile.

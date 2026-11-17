@@ -12,3 +12,19 @@ Append-only, dated decisions and changes. Entry format:
   (evidence: to_do.md verification log)
 - 2026-11-17 — git init + .gitignore (`original_code/`, `data_example/`,
   build artifacts ignorati). Nessun push. (evidence: commit iniziale)
+- 2026-11-17 — Risposte utente Q1-Q8 ("Piano ok"): converter CLI/package ora;
+  UI nuova dopo; dtype opzione default uint32; formato B con griglia inferita +
+  metadati esterni; unità µm/µm/s default da conferma; M4 sui file reali.
+  (evidence: chat Telegram 2026-11-17)
+- 2026-11-17 — Contratto kickstart assorbito (più restrittivo): NC esplicita
+  mai max+1 (default strumentale 16384 UNVERIFIED); calibrazione come allegato
+  energy[i]=m·i+q con conteggi element-identical (niente resampling/crop);
+  ordine output (y, x, channel); maschera di acquisizione; niente auto-rebin /
+  auto energy-crop; UI minimale Dash in milestone tardiva. Documenti aggiornati
+  a v2; domande aperte N1-N4. (evidence: kickstart_thread_prompt.md;
+  operational_plan.md §8-9)
+- 2026-11-17 — Misure M0 v2 (awk mawk-safe, 5 passate read-only): max canale
+  15902/15999; griglie osservate 285×76 / 215×145 step 1000 uniforme; 0 eventi
+  orfani; anomalie localizzate: colonna x=290000 assente (mappa11, 76 px),
+  marker X dangling (5000,265000) / (219000,149000) a 0 eventi.
+  (evidence: to_do.md verification log)

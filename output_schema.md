@@ -1,49 +1,73 @@
 # Output schema — NPZ / HDF5 comuni
 
-Status: M0 — proposta, in attesa di approvazione. NPZ e HDF5 portano gli
-stessi campi logici; l'output è il datacube **dopo i passi scelti** dalla
-pipeline, con gli attributi che documentano esattamente cosa è stato fatto.
+Status: M0 v2 (2026-11-17) — contratto allineato al kickstart, in attesa di
+approvazione. Principio: l'output è la rappresentazione **fedele** (lossless)
+del raw: i conteggi non vengono mai modificati dalla calibrazione
+(element-identical); niente auto-rebinning né auto energy-crop. NPZ e HDF5
+portano gli stessi campi logici.
 
-## Pipeline
+## Pipeline core
 
 ```
-eventi → (NX, NY, NC0) uint32   [populate]
-       → (NX, NY, NC1) uint32   [calibrate, opzionale]
-       → (NX, NY, NCout)        [rebin, opzionale]  uint32 (sum) | float64 (mean)
+raw (A/B) → inspect_raw      → report validazione (nessuna allocazione)
+         → read_raw          → Dataset: img (NY,NX,NC) + assi + mask + metadati
+         → with_calibration  → + energy[i] = m·i + q   (conteggi intatti)
+         → write_dataset     → .h5 / .npz
 ```
+
+Opzionale, esplicito, non di default, **trasformativo** (documentato nei
+metadati di output): `rebin(size, how=sum|mean)`.
+
+## Campi comuni
+
+| campo | forma/tipo | significato |
+| ----- | ---------- | ----------- |
+| `img` | (NY, NX, NC) uint32 | conteggi eventi per pixel e canale; ordine **(y, x, channel)** |
+| `channel` | (NC,) uint32 | indici ADC originali 0..NC−1 — sempre presente |
+| `energy` | (NC,) float64 | **solo se calibrato**: `energy[i] = m·i + q` |
+| `x_axis` | (NX,) float64 | coordinate spaziali X (unità dai metadati) |
+| `y_axis` | (NY,) float64 | coordinate spaziali Y |
+| `mask` | (NY, NX) bool | maschera di acquisizione: `False` = non acquisito (zero, non misurato) |
+| `metadata_json` | str (JSON) | vedi sotto — no pickle |
+
+## Contenuto di `metadata_json`
+
+- `schema_version` (int) — versione di questo documento.
+- `format`: "xml" \| "data-only".
+- `source_file`: basename del file sorgente.
+- `n_channels` (int), `dtype` (str), `n_events` (int).
+- `units`: `{x: "µm", y: "µm", velocity: "µm/s"}` + `units_status:
+  "assumed"\|"confirmed"` (l'XML non le dichiara — conferma N4).
+- `grid`: `{x_min, x_max, x_step, y_min, y_max, y_step,
+  source: "xml"\|"inferred"\|"external"}`.
+- `calibration`: `{m, q, provenance: "xml"\|"external"}` — solo se calibrato.
+- `raw`: tutti i campi XML (A) o i campi esterni (B).
+- `anomalies`: lista delle anomalie di validazione (dangling marker, colonne
+  mancanti, …) — nessuna viene corretta silenziosamente.
+- `transforms`: lista delle trasformazioni applicate post-read (es.
+  `rebin(size, how)`) — vuota nella pipeline core.
+- `software`, `created_utc`.
 
 ## HDF5 (`<nome>.h5`)
 
-- dataset `/xrf` — cubo finale.
-- dataset `/x_axis_um` — float64[NX] = xmin + i·step_x.
-- dataset `/y_axis_um` — float64[NY].
-- dataset `/channel_index` (uint32[NC0]) se non calibrato, altrimenti
-  `/energy_keV` (float64[NC], griglia uniforme usata per il binning).
-- attributi su `/`:
-
-| attributo | tipo | contenuto |
-| --------- | ---- | --------- |
-| `format` | str | "xml" \| "data-only" |
-| `source_file` | str | basename del file sorgente |
-| `metadata_json` | str | tutti i campi XML (A) o metadati esterni (B) |
-| `calibration_m`, `calibration_q` | f64 | assenti se non disponibile |
-| `E_range` | str (JSON) | assente se nessuna crop |
-| `original_depth` | int | NC0 |
-| `rebin_mode` | str | "none" \| "sum" \| "mean" |
-| `rebin_size` | int | NCout (0 se "none") |
-| `software` | str | "xrfraw <version>" |
-| `created_utc` | str | ISO 8601 |
+- dataset: `/img`, `/channel`, `/energy` (se calibrato), `/x_axis`, `/y_axis`,
+  `/mask`.
+- attributi su `/`: `format`, `source_file`, `n_channels`, `dtype`,
+  `n_events`, `metadata_json` (str), `calibration_m`, `calibration_q`
+  (se calibrato), `software`, `created_utc`.
 
 ## NPZ (`<nome>.npz`)
 
-Array: `xrf`, `x_axis_um`, `y_axis_um`, `channel_index` **o** `energy_keV`,
+Array: `img`, `channel`, `energy` (se calibrato), `x_axis`, `y_axis`, `mask`,
 più `attrs` (stringa JSON con gli stessi campi scalari dell'HDF5).
 
 ## Convenzioni
 
-- Nome output: basename dell'input + estensione; directory di output via CLI.
-- Pixel mancanti: zero sulla griglia completa (come legacy).
-- Asse energia non calibrato: si conservano l'asse canale + m/q negli
-  attributi (chi legge calcola E = m·ch + q); la griglia uniforme esiste solo
-  se si applica la calibrazione.
-- Semantica dei passi: `scientific_notes.md` §9 (conservazione dei conteggi).
+- Nome output: basename dell'input + estensione; directory via CLI.
+- **Nessun overwrite implicito**: file esistente → errore esplicito (salvo
+  flag esplicito). Scrittura su file temporaneo + rename a successo
+  (niente output parziali).
+- Pixel non acquisiti: zero + `mask=False` (distinguibili da uno zero misurato).
+- Output non calibrato: asse `channel` + (se m/q noti ma non applicati)
+  m/q nei metadati — chi legge calcola `E = m·ch + q`.
+- Semantica e invarianze: `scientific_notes.md` §8-14.

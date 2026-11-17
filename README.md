@@ -1,23 +1,28 @@
 # raw-xrf-to-h5-opener-python
 
 Convertitore raw MA-XRF (Fi MA-XRF, INFN-CHNet) → NPZ/HDF5 comuni: datacube
-(X, Y, C) di eventi per pixel, assi coordinati, metadati, con calibrazione
-energia opzionale (`E = m·ch + q`) e rebin opzionale.
+di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC, assi
+spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
+energia come **allegato** (`energy[i] = m·i + q`, conteggi element-identical).
 
-**Status: M0 completato (2026-11-17) — piano in attesa di approvazione;
-nessun codice nuovo ancora** (`src/your_app/` è lo scheletro di template e
-verrà sostituito da `src/xrfraw/` a M1).
+**Status: M0 v2 completato (2026-11-17) — contratto kickstart assorbito,
+piano in attesa di approvazione (N1-N4); nessun codice nuovo ancora**
+(`src/your_app/` è lo scheletro di template, sostituito da `src/xrfraw/` a M1).
 
 ## Cosa fa
 
-- Legge le due varianti di file raw (XML+dati e solo-dati) —
-  grammatica in `data_format.md`.
-- Costruisce il datacube (istogrammi di eventi per pixel), uint32.
-- Calibrazione energia opzionale: binning conservativo (i conteggi non si
-  perdono; il legacy ne perdeva silenziosamente — `legacy_audit.md` L4).
-- Rebin opzionale: default `sum` (conserva i totali), `mean` per
-  compatibilità legacy.
+- Legge le due varianti di file raw (XML+dati e solo-dati) — grammatica in
+  `data_format.md`; valida prima di allocare il cubo (`inspect_raw`).
+- Costruisce il datacube (Y, X, NC) uint32 (opzione uint16) con profondità
+  canali **esplicita** (default strumentale 16384 — UNVERIFIED), conservando
+  i canali finali a zero.
+- Calibrazione energia come allegato: i conteggi non cambiano (il legacy ne
+  perdeva silenziosamente — `legacy_audit.md` L4).
+- Nessun auto-rebinning / auto energy-crop (contratto kickstart); rebin
+  esplicito (sum/mean) solo su richiesta.
 - Scrive `.h5` o `.npz` con lo stesso schema logico — `output_schema.md`.
+- UI minimale Dash (DARKLY, accent #4196B4, embeddabile in Jupyter) prevista
+  in milestone tardiva (M5), dopo il converter core.
 
 ## Setup (uv, path primario — da verificare a M1)
 
@@ -26,50 +31,50 @@ uv sync
 .venv/bin/python -m pytest -q
 ```
 
-Pip: `pip install raw-xrf-to-h5-opener-python` (dopo M5).
-
-## Uso (target M3 — firme esatte a M1/M2)
+## Uso (target M3 — firme esatte a M1)
 
 CLI:
 
 ```bash
 xrf-raw-to-h5 FILE_OR_DIR -o OUT_DIR --format h5|npz \
-    [--rebin none|sum|mean --rebin-size N] [--E-range LO HI] [--metadata meta.json]
+    [--n-channels N] [--dtype uint32|uint16] [--metadata meta.json] \
+    [--rebin N sum|mean]
 ```
 
 API:
 
 ```python
-from xrfraw.data import read_raw          # formato A o B, streaming
-from xrfraw.processing import populate, calibrate, rebin
-from xrfraw.io import write_h5, write_npz
+from xrfraw.data import inspect_raw, read_raw
+from xrfraw.processing import with_calibration
+from xrfraw.io import write_dataset
 
-raw = read_raw("mappa11.txt")             # eventi + metadati
-cube = populate(raw)                      # (NX, NY, NC0) uint32
-cube = calibrate(cube, raw.m, raw.q)      # opzionale
-write_h5("mappa11.h5", cube, raw)
+report = inspect_raw("mappa11.txt")            # validazione, nessuna allocazione
+ds = read_raw("mappa11.txt")                   # (NY, NX, NC) + assi + mask + metadati
+ds = with_calibration(ds, m=0.00259259, q=-0.0355556, provenance="xml")  # conteggi intatti
+write_dataset(ds, "mappa11.h5", fmt="h5")
 ```
 
 ## Verified vs UNVERIFIED
 
 - **Verified (M0)**: grammatica degli input sui 2 file di esempio
-  (`data_format.md` §4, misurazioni a flusso); audit del legacy
+  (`data_format.md` §4, 5 passate streaming: eventi 19 825 090 / 56 661 209,
+  max canale 15902/15999, griglie, anomalie localizzate); audit del legacy
   (`legacy_audit.md`); crash legacy sul formato B riprodotto (ParseError,
-  stdlib ET, 2026-11-17).
-- **UNVERIFIED**: tutto il codice (non esiste ancora); deploy
-  docker/apptainer/wslc (NOT TESTED, no daemon in questo ambiente); CI
-  (preparata a M5, no push); unità µm di X/Y (Q7).
+  2026-11-17).
+- **UNVERIFIED**: tutto il codice (non esiste ancora); NC strumentale 16384
+  (N1); unità µm/µm/s (N4); deploy docker/apptainer/wslc (NOT TESTED, no
+  daemon in questo ambiente); CI (M6, no push).
 
 ## Layout e repo map
 
-Vedi `operational_plan.md` §2.
+Vedi `operational_plan.md` §3.
 
 | path | ruolo |
 | ---- | ----- |
 | `AGENTS.md` | regole agent (leggere prima di tutto) |
 | `operational_plan.md` | decisioni, milestone, criteri di accettazione, domande aperte |
 | `legacy_audit.md` | problemi legacy verificati + differenze intenzionali |
-| `data_format.md` | grammatica degli input (formati A/B, stream eventi) |
+| `data_format.md` | grammatica degli input (formati A/B, stream eventi, NC) |
 | `output_schema.md` | schema comune NPZ/HDF5 |
 | `scientific_notes.md` | calibrazione, conteggi, assi, precisione |
 | `to_do.md` | Now/Next/Later/Blocked + verification log |

@@ -80,7 +80,12 @@ app.run(jupyter_mode="inline", jupyter_height=800)  # notebook (vedi example.ipy
 Carica il raw (upload, load from link o path_to_file), espone ogni
 parametro di `convert_file` come input (out_path, fmt, n_channels, dtype,
 metadata, rebin_spec, rebin_to, cal m/q, compress, overwrite), **Convert**
-e **Download file** per l'output `.h5`/`.npz`.
+e **Download file** per l'output `.h5`/`.npz`. Tooltip su ogni campo;
+spinner (`dcc.Loading`) durante i callback; al click su Convert: status
+immediato "conversione in corso" + tasto disabilitato fino al termine
+(anti doppio-click: un solo Convert alla volta). Upload limitato a
+~48 MB (il browser base64-izza il file in memoria): per i file grandi
+usa `path_to_file`.
 
 ## Verified vs UNVERIFIED
 

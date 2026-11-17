@@ -105,3 +105,63 @@ def test_run_convert_default_outpath(tmp_path, monkeypatch):
     write_format_a(p, GRID32, PIXELS)
     out, _ = run_convert(str(p), "", "h5", 16, "uint32", None, None, None, None, 0, True)
     assert out.is_file() and out.name == f"a_16.h5" and out.parent.name == "xrfraw_ui"
+
+
+def _update(app, outputs, inputs, state, changed):
+    """POST /_dash-update-component: il percorso reale di un callback Dash (no browser)."""
+    spec = [f"{o['id']}.{o['property']}" for o in outputs]
+    # chiave come dash._utils.create_callback_id: singolo -> "id.prop", multi -> "..id.prop...id.prop.."
+    out_key = spec[0] if len(spec) == 1 else ".." + "...".join(spec) + ".."
+    body = {
+        "output": out_key,
+        "outputs": outputs,
+        "inputs": inputs,
+        "changedPropIds": changed,
+        "state": state,
+    }
+    r = app.server.test_client().post("/_dash-update-component", json=body)
+    assert r.status_code == 200, r.get_data(as_text=True)
+    return r.get_json()["response"]
+
+
+def test_convert_callback_http_roundtrip(tmp_path):
+    # E2E headless: click su Convert via HTTP -> file scritto, tasto riabilitato,
+    # feedback immediato ("conversione in corso") visibile al click.
+    p = tmp_path / "a.txt"
+    write_format_a(p, GRID32, PIXELS)
+    out_h5 = tmp_path / "o.h5"
+    app = build_app(src=str(p))
+    state = [
+        {"id": "in-path", "property": "value", "value": str(p)},
+        {"id": "in-out", "property": "value", "value": str(out_h5)},
+        {"id": "in-fmt", "property": "value", "value": "h5"},
+        {"id": "in-nc", "property": "value", "value": "16"},
+        {"id": "in-dtype", "property": "value", "value": "uint32"},
+        {"id": "in-meta", "property": "value", "value": ""},
+        {"id": "in-rebin-n", "property": "value", "value": ""},
+        {"id": "in-rebin-how", "property": "value", "value": "off"},
+        {"id": "in-rebin-to", "property": "value", "value": ""},  # vuoto = off: era il crash 500
+        {"id": "in-cal-m", "property": "value", "value": ""},
+        {"id": "in-cal-q", "property": "value", "value": ""},
+        {"id": "in-compress", "property": "value", "value": "0"},
+        {"id": "in-overwrite", "property": "value", "value": ["overwrite"]},
+    ]
+    resp = _update(app,
+                   [{"id": "btn-convert", "property": "disabled"},
+                    {"id": "out-status", "property": "children"},
+                    {"id": "file-store", "property": "data"}],
+                   [{"id": "btn-convert", "property": "n_clicks", "value": 1}],
+                   state, ["btn-convert.n_clicks"])
+    assert out_h5.is_file()
+    assert resp["btn-convert"]["disabled"] is False
+    assert "OK" in json.dumps(resp["out-status"]["children"])
+    assert resp["file-store"]["data"]["path"] == str(out_h5)
+    # feedback immediato: al click, status "in corso" + tasto disabilitato
+    resp = _update(app,
+                   [{"id": "btn-convert", "property": "disabled"},
+                    {"id": "out-status", "property": "children"}],
+                   [{"id": "btn-convert", "property": "n_clicks", "value": 2}],
+                   [{"id": "in-path", "property": "value", "value": str(p)}],
+                   ["btn-convert.n_clicks"])
+    assert resp["btn-convert"]["disabled"] is True
+    assert "conversione in corso" in json.dumps(resp["out-status"]["children"])

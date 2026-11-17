@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import tempfile
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -31,6 +32,11 @@ _ACCENT_BTN = {
 }
 # Carica gli upload e gli output default: deve sopravvivere tra Convert e Download.
 _WORKDIR = Path(tempfile.gettempdir()) / "xrfraw_ui"
+# Upload > ~48 MB raw: il browser deve base64-il file in memoria (crash/gray screen);
+# i file grandi passano per path_to_file (già sul disco).
+_MAX_UPLOAD_B64 = 64 * 1024 * 1024
+# Un solo Convert alla volta: i doppio-click non duplicano la conversione.
+_CONVERT_LOCK = threading.Lock()
 
 
 def _alert(msg: str, color: str) -> dbc.Alert:
@@ -53,7 +59,7 @@ def run_convert(path, out_path, fmt, nc, dtype, meta, rebin_spec, rebin_to,
     out.parent.mkdir(parents=True, exist_ok=True)  # write_dataset fa rename atomico
     ds = convert_file(path, out, fmt=fmt, n_channels=int(nc or 16384), dtype=dtype,
                       metadata=meta, rebin_spec=rebin_spec, rebin_to=rebin_to,
-                      cal=cal, compress=int(compress if compress is not None else 4),
+                      cal=cal, compress=int(compress if compress not in (None, "") else 4),
                       overwrite=bool(overwrite))
     dt = time.monotonic() - t0
     note = "calibrato" if ds.energy is not None else "non calibrato"
@@ -85,12 +91,13 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
             color=ACCENT,
         ),
         html.Br(),
+        dcc.Loading([
         # --- caricamento file (template dash-xrf-visualizer): upload | link | path ---
         dbc.Row([
             dbc.Col(md=5, children=[
                 dcc.Upload(
                     id="upload",
-                    children=html.Div("Upload raw .txt (formato A o B, drag & drop or click)",
+                    children=html.Div("Upload raw .txt (piccoli file; drag & drop or click)",
                                       style={"display": "inline-block", "width": "100%",
                                              "lineHeight": "50px", "border": "1px dashed #999",
                                              "textAlign": "center"}),
@@ -167,6 +174,46 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
         dcc.Download(id="download"),
         dbc.Alert(id="out-status", is_open=False),
         dcc.Store(id="file-store", data=None),
+        # --- tooltip: cosa fa ogni campo (hover) ---
+        dbc.Tooltip("Percorso del file raw (formato A: XML+dati; formato B: solo dati). "
+                    "Oppure usa upload o Load from link sopra. Per file grandi usa SEMPRE "
+                    "il percorso, non l'upload.", target="in-path", placement="top"),
+        dbc.Tooltip("Dove scrivere l'output. Vuoto: <temp>/xrfraw_ui/<nome>_<n_channels>.<fmt> "
+                    "(poi Download file).", target="in-out", placement="top"),
+        dbc.Tooltip("Formato output: h5 (HDF5) o npz.", target="in-fmt", placement="top"),
+        dbc.Tooltip("Profondità ESATTA di lettura: l'output è (y, x, n_channels). "
+                    "Default strumentale 16384; errore se un canale la supera.",
+                    target="in-nc", placement="top"),
+        dbc.Tooltip("Tipo dati del cubo. float32/float64 per consumer che richiedono "
+                    "floating (es. dash-xrf-visualizer).", target="in-dtype", placement="top"),
+        dbc.Tooltip("Percorso a un JSON con griglia/calibrazione (servire al formato B). "
+                    "Vuoto: griglia inferita, calibrazione dall'XML (formato A) o assente.",
+                    target="in-meta", placement="top"),
+        dbc.Tooltip("Raggruppamento dei canali (k, how): es. (2, sum) = somma coppie di "
+                    "canali. off = disattivo. Mutuo esclusivo con rebin_to.",
+                    target="in-rebin-n", placement="top"),
+        dbc.Tooltip("Modalità rebin: off | sum | mean.", target="in-rebin-how", placement="top"),
+        dbc.Tooltip("Riduce il cubo a profondità target (somma per gruppi, totali "
+                    "conservati): 512…8192. Solo sum. Mutuo esclusivo con rebin size/how.",
+                    target="in-rebin-to", placement="top"),
+        dbc.Tooltip("Pendenza calibrazione energia (keV/ch). Vuota: usa quella "
+                    "dichiarata nell'XML (formato A) o nel metadata JSON.",
+                    target="in-cal-m", placement="top"),
+        dbc.Tooltip("Intercetta calibrazione energia (keV). Serve con m.",
+                    target="in-cal-q", placement="top"),
+        dbc.Tooltip("Compressione gzip dell'output: 0 (nessuna) … 9.", target="in-compress",
+                    placement="top"),
+        dbc.Tooltip("Spento: il writer rifiuta di sovrascrivere un file esistente.",
+                    target="in-overwrite", placement="top"),
+        dbc.Tooltip("Lancia convert_file. Durante la conversione appare lo spinner e "
+                    "il tasto si disabilita (i file grandi richiedono minuti).",
+                    target="btn-convert", placement="top"),
+        dbc.Tooltip("Scarica l'output dell'ultimo Convert riuscito.", target="btn-download",
+                    placement="top"),
+        dbc.Tooltip("Percorso di un share/download link (ownCloud, nextCloud, Zenodo, …). "
+                    "Per file grandi preferisci path_to_file.", target="load-url",
+                    placement="top"),
+        ], type="circle"),
     ])
 
     @app.callback([Output("in-path", "value"), Output("load-msg", "children")],
@@ -187,6 +234,9 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                     dest.write_bytes(r.read())
             elif contents:
                 _, b64 = contents.split(",", 1)
+                if len(b64) > _MAX_UPLOAD_B64:
+                    return no_update, ("File troppo grande per l'upload nel browser "
+                                       "(limite ~48 MB): usa path_to_file")
                 _WORKDIR.mkdir(parents=True, exist_ok=True)
                 dest = _WORKDIR / (Path(filename or "raw.txt").name)
                 dest.write_bytes(base64.b64decode(b64))
@@ -196,7 +246,24 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
             return no_update, f"Caricamento fallito: {e}"
         return str(dest), f"Caricato {dest.name} -> path_to_file"
 
-    @app.callback([Output("out-status", "children"), Output("file-store", "data")],
+    @app.callback([Output("btn-convert", "disabled"), Output("out-status", "children")],
+                  [Input("btn-convert", "n_clicks")],
+                  [State("in-path", "value")],
+                  prevent_initial_call=True)
+    def _on_convert_start(_n, path):
+        # Feedback immediato al click: status + tasto spento (la conversione
+        # reale è lunga: senza questo sembrerebbe un tasto morto).
+        path = (path or "").strip()
+        try:
+            sz = (f" ({Path(path).stat().st_size / 1e6:.0f} MB)"
+                  if path and Path(path).is_file() else "")
+        except OSError:
+            sz = ""
+        return True, html.Span(f"⏳ conversione in corso: {path or '(nessun file)'}{sz} — "
+                               f"può richiedere minuti sui file grandi")
+
+    @app.callback([Output("btn-convert", "disabled"), Output("out-status", "children"),
+                   Output("file-store", "data")],
                   [Input("btn-convert", "n_clicks")],
                   [State("in-path", "value"), State("in-out", "value"),
                    State("in-fmt", "value"), State("in-nc", "value"),
@@ -210,27 +277,31 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                     m, q, compress, overwrite):
         path = (path or "").strip()
         if not path:
-            return _alert("Indica il file raw: upload, load from link o path_to_file",
-                          "warning"), no_update
+            return False, _alert("Indica il file raw: upload, load from link o path_to_file",
+                                 "warning"), no_update
         if not Path(path).is_file():
-            return _alert(f"File non trovato: {path}", "danger"), no_update
-        if (m in (None, "")) != (q in (None, "")):
-            return _alert("Calibrazione: m e q servono entrambi (o entrambi vuoti)",
-                          "warning"), no_update
-        rebin_spec = (int(rn or 2), how) if how not in (None, "off") else None
-        rebin_to = int(rto) if rto not in (None, "off") else None
-        if rebin_spec and rebin_to:
-            return _alert("rebin_spec e rebin_to sono mutuamente esclusivi",
-                          "warning"), no_update
-        cal = {"m": float(m), "q": float(q), "provenance": "user"} if m not in (None, "") else None
+            return False, _alert(f"File non trovato: {path}", "danger"), no_update
+        if not _CONVERT_LOCK.acquire(blocking=False):
+            return False, _alert("Una conversione è già in corso", "warning"), no_update
         try:
+            # i campi vuoti arrivano come "" (placeholder != value): parsing difensivo,
+            # ogni errore è un alert rosso, non un 500 che rompe la UI
+            if (m in (None, "")) != (q in (None, "")):
+                raise ValueError("calibrazione: m e q servono entrambi (o entrambi vuoti)")
+            rebin_spec = (int(rn or 2), how) if (how or "off") not in (None, "off") else None
+            rebin_to = int(rto) if (rto or "").strip() not in ("", "off") else None
+            if rebin_spec and rebin_to:
+                raise ValueError("rebin_spec e rebin_to sono mutuamente esclusivi")
+            cal = {"m": float(m), "q": float(q), "provenance": "user"} if m not in (None, "") else None
             out, summary = run_convert(path, (out_path or "").strip(), fmt, nc, dtype,
                                        (meta or "").strip() or None, rebin_spec,
                                        rebin_to, cal, compress,
                                        "overwrite" in (overwrite or []))
         except Exception as e:
-            return _alert(f"Conversione fallita: {e}", "danger"), no_update
-        return _alert(summary, "success"), {"path": str(out), "filename": out.name}
+            return False, _alert(f"Conversione fallita: {e}", "danger"), no_update
+        finally:
+            _CONVERT_LOCK.release()
+        return False, _alert(summary, "success"), {"path": str(out), "filename": out.name}
 
     @app.callback(Output("download", "contents"),
                   [Input("btn-download", "n_clicks")],

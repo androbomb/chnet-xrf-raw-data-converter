@@ -88,7 +88,8 @@ nella milestone M5, dopo M4.
 - Legacy ≠ riferimento scientifico: ogni deviazione documentata in
   `legacy_audit.md` §2 e in `scientific_notes.md`.
 - dtype: uint32 per il cubo (default, opzione utente; overflow uint16
-  legacy, L10), float64 per griglie energia e aritmetica.
+  legacy, L10); opzioni float32/float64 per consumer che richiedono
+  floating (dash-xrf-visualizer); float64 per griglie energia e aritmetica.
 - NC (n° canali) è la profondità ESATTA del cubo: l'output è sempre
   (h, w, n_channels); default strumentale 16384, sovrascrivibile via
   opzione/metadati — mai `max(observed)+1`. Se il max canale osservato la

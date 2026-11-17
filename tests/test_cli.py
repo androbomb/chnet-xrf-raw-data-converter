@@ -75,7 +75,7 @@ def test_cli_metadata_conflict_exit1_both_values(tmp_path):
 def test_cli_usage_and_missing_exit_codes(tmp_path):
     a = tmp_path / "a.txt"
     write_format_a(a, GRID32, PIXELS)
-    assert run(a, "-o", tmp_path / "o", "--dtype", "float32").returncode == 2
+    assert run(a, "-o", tmp_path / "o", "--dtype", "float16").returncode == 2
     assert run(a, "-o", tmp_path / "o", "--rebin", "1", "sum").returncode == 2
     assert run(a, "-o", tmp_path / "o", "--rebin", "2", "max").returncode == 2
     assert run(tmp_path / "nope.txt", "-o", tmp_path / "o").returncode == 1

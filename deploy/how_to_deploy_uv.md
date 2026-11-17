@@ -40,7 +40,7 @@ Verifica:
 .venv/bin/xrf-raw-to-h5 FILE_O_DIR -o OUT_DIR --format h5
 ```
 
-Opzioni: `--n-channels N` (default 16384), `--dtype uint32|uint16`,
+Opzioni: `--n-channels N` (default 16384), `--dtype uint32|uint16|float32|float64`,
 `--metadata JSON` (griglia/calibrazione per il formato B),
 `--rebin SIZE sum|mean`, `--overwrite` (default: rifiuta di sovrascrivere).
 Exit code: 0 ok, 1 conversione fallita, 2 errore d'uso.

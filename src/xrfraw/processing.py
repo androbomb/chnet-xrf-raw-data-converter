@@ -84,8 +84,8 @@ def rebin(ds: Dataset, size: int, how: str = "sum") -> Dataset:
     s = acc.reshape(h, w, n_out, size).sum(axis=-1)
     if how == "mean":
         out = s.astype(np.float64) / float(size)
-    elif s.dtype == np.float64:
-        out = s
+    elif np.issubdtype(s.dtype, np.floating):
+        out = s  # float cube: sum keeps dtype (exact for counts < 2^24 in float32)
     else:
         if s.max() > np.iinfo(np.uint32).max:
             raise ValueError(

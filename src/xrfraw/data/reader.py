@@ -26,7 +26,10 @@ DEFAULT_N_CHANNELS = 16384  # instrument MCA depth (user-confirmed default, N1)
 # Units are not declared in the file: assumed defaults (N4), marked in metadata.
 DEFAULT_UNITS = {"x": "µm", "y": "µm", "velocity": "µm/s"}
 _TOLERATED_TAIL = {"</analysisData>", "</XRFanalysis>"}
-_ALLOWED_DTYPES = (np.dtype("uint32"), np.dtype("uint16"))
+_ALLOWED_DTYPES = (
+    np.dtype("uint32"), np.dtype("uint16"),
+    np.dtype("float32"), np.dtype("float64"),
+)
 
 
 def _is_x_header(s: str) -> bool:
@@ -306,7 +309,8 @@ def read_raw(path, *, n_channels: int = DEFAULT_N_CHANNELS, dtype: str = "uint32
         MCA): the output is always (h, w, n_channels). If the max observed channel
         reaches it, XRFReadError with the next power of 2 as a hint (the MCA depth
         is a power of 2). To reduce the depth afterwards use rebin / rebin_to.
-    dtype: "uint32" (default) or "uint16" (checked for per-cell overflow).
+    dtype: "uint32" (default), "uint16" (per-cell overflow checked), or
+    "float32"/"float64" for float-only consumers (dash-xrf-visualizer).
     metadata: optional path to a JSON with external "grid" / "calibration"
         (needed for format B; conflict-checked against the XML when present).
     """
@@ -314,7 +318,9 @@ def read_raw(path, *, n_channels: int = DEFAULT_N_CHANNELS, dtype: str = "uint32
         raise ValueError(f"n_channels must be > 0, got {n_channels}")
     np_dtype = np.dtype(dtype)
     if np_dtype not in _ALLOWED_DTYPES:
-        raise ValueError(f"dtype must be 'uint32' or 'uint16', got {dtype!r}")
+        raise ValueError(
+            f"dtype must be one of 'uint32', 'uint16', 'float32', "
+            f"'float64', got {dtype!r}")
     meta_in = load_metadata(metadata) if metadata is not None else None
 
     scan = _scan(path, n_channels=n_channels, verbose=verbose)

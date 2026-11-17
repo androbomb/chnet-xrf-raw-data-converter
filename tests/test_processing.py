@@ -127,6 +127,14 @@ def test_rebin_uint16_upcast():
     assert int(out.img.sum()) == ds.n_events
 
 
+def test_rebin_sum_float32_keeps_dtype():
+    ds = _mini_ds(nc=4, dtype=np.float32)
+    out = rebin(ds, 2)
+    assert out.img.dtype == np.float32
+    np.testing.assert_array_equal(out.img, ds.img.reshape(3, 4, 2, 2).sum(axis=-1))
+    assert int(out.img.sum()) == ds.n_events
+
+
 def test_rebin_chained_and_calibrated():
     ds = with_calibration(_mini_ds(nc=8, seed=2), 0.25, -0.5, provenance="user")
     out = rebin(rebin(ds, 2), 2)

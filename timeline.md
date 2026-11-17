@@ -178,3 +178,13 @@ Append-only, dated decisions and changes. Entry format:
   (gzip) e npz (zip-deflate) compressi, livello 4 di default, compress=0
   = none, dichiarato in attr `compression`. Test: 55 passed
   (+4 rebin_to, +3 compress, -2 snap; asserzioni m aggiornate).
+- 2026-11-17 — dtype float (richiesta: l'output uint non è compatibile con
+  dash-xrf-visualizer, la cui validate_cube_array richiede floating):
+  _ALLOWED_DTYPES esteso a uint16/uint32/float32/float64 (reader, CLI
+  --dtype, dropdown UI, README, AGENTS, deploy doc). Fix rebin: il branch
+  sum trattava i float solo float64 (un float32 finiva castato a uint32)
+  — ora ogni dtype floating preserva il proprio dtype (sum esatto per
+  conteggi < 2^24 in float32). _populate invariato (+= 1 generico; solo
+  uint16 ha safe-accumulate + overflow check). Test: +test_float_dtypes
+  (read float32/float64 + float16 rifiutato), +test_rebin_sum_float32_keeps_dtype,
+  test_cli: float32 ora valido, float16 → exit 2.

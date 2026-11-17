@@ -14,9 +14,11 @@ contratto. Tutte le milestone chiuse.**
 
 - Legge le due varianti di file raw (XML+dati e solo-dati) — grammatica in
   `data_format.md`; valida prima di allocare il cubo (`inspect_raw`).
-- Costruisce il datacube (Y, X, n_channels) uint32 (opzione uint16) con
-  profondità **esatta** — l'output è sempre (Y, X, n_channels) — default
-  strumentale 16384 (UNVERIFIED), canali finali a zero.
+- Costruisce il datacube (Y, X, n_channels) con dtype a scelta: `uint32`
+  (default), `uint16`, `float32`, `float64` (per consumer che richiedono
+  floating, es. dash-xrf-visualizer) — profondità **esatta**: l'output è
+  sempre (Y, X, n_channels); default strumentale 16384 (UNVERIFIED),
+  canali finali a zero.
 - Calibrazione energia come allegato: i conteggi non cambiano (il legacy ne
   perdeva silenziosamente — `legacy_audit.md` L4).
 - Nessun auto-rebinning / auto energy-crop (contratto kickstart); rebin
@@ -40,7 +42,7 @@ silenziosa — `--overwrite` per sostituire):
 
 ```bash
 xrf-raw-to-h5 FILE_OR_DIR -o OUT_DIR --format h5|npz \
-    [--n-channels N] [--dtype uint32|uint16] [--metadata meta.json] \
+    [--n-channels N] [--dtype uint32|uint16|float32|float64] [--metadata meta.json] \
     [--rebin N sum|mean] [--rebin-to 512|1024|2048|4096|8192] \
     [--compress 0-9] [--overwrite]
 ```

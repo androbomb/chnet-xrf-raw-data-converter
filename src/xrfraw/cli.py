@@ -29,7 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--n-channels", type=int, default=None,
                    help="exact channel depth of the output cube (default: 16384); "
                         "error if the max observed channel exceeds it")
-    p.add_argument("--dtype", choices=("uint32", "uint16"), default="uint32",
+    p.add_argument("--dtype",
+                   choices=("uint32", "uint16", "float32", "float64"),
+                   default="uint32",
                    help="cube dtype (default: uint32)")
     p.add_argument("--metadata", default=None,
                    help="external metadata JSON (grid/calibration; format B needs it)")

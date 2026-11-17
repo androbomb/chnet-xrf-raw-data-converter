@@ -88,7 +88,8 @@ def build_app() -> dash.Dash:
             dbc.Col(_field("dtype cubo",
                            dcc.Dropdown(id="in-dtype", value="uint32",
                                         options=[{"label": v, "value": v}
-                                                 for v in ("uint32", "uint16")])), md=6),
+                                                 for v in ("uint32", "uint16",
+                                                           "float32", "float64")])), md=6),
         ]),
         dbc.Row([
             dbc.Col(_field("rebin canale",

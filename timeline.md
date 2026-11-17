@@ -113,3 +113,15 @@ Append-only, dated decisions and changes. Entry format:
   root; UI Dash inline). Logica verificata senza Jupyter in scratch
   (tiny 3×2: shape (2,3,16384), sum(img)=8==n_events, no-overwrite exit
   1). .gitignore += demo_out/, demo_tiny.txt.
+- 2026-11-17 — Sezione deploy/ aggiornata (richiesta utente: UV è il
+  percorso che userà): `how_to_deploy_uv.md` riscritto come percorso
+  primario con istruzioni chiare (install uv, `uv sync`/`uv sync --dev`,
+  uso CLI/Python/UI/Jupyter, kernel `xrf-raw` una-tantum con ipykernel,
+  Windows) e result log con valori REALI verificati oggi (uv 0.13.7,
+  Python 3.12.16, sync OK, 47 passed in 15 s, kernel NOT TESTED — no
+  Jupyter in questo ambiente); `deploy/uv/README.md` allineato (rimossa
+  sezione JAX/GPU residua dal template); `how_to_deploy_pip.md`: nomi
+  reali (raw-xrf-to-h5-opener-python/xrfraw), kernel xrf-raw, nota
+  contratto (PyPI/TestPyPI bloccati), nota license (campo pyproject
+  mancante); docker/apptainer/wslc + Dockerfile/your-app.def:
+  "CPU-only JAX" → "CPU-only (numpy)" (il progetto è CPU-only by design).

@@ -6,7 +6,7 @@ Bootstrap: docker
 From: your-app:latest
 
 %labels
-    Description "«APP_NAME» — Dash/JAX visualizer (template)"
+    Description "raw-xrf-to-h5-opener-python — raw MA-XRF converter (template)"
     Maintainer "«YOUR_NAME»"
 
 %runscript

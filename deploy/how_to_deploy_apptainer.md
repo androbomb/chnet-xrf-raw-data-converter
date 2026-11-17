@@ -1,7 +1,7 @@
 # Deploy — Apptainer (SIF)
 
 **Status:** NOT TESTED (template; run it and fill the result log).
-CPU-only JAX: no GPU passthrough. The SIF boots from the Docker image, so
+CPU-only (numpy, no GPU). The SIF boots from the Docker image, so
 you need Docker only for the build step.
 
 ## Steps
@@ -29,7 +29,7 @@ you need Docker only for the build step.
        «app».sif
    ```
 
-4. Open `http://localhost:8765`. First request compiles the JAX reductions.
+4. Open `http://localhost:8765`.
 
 ## Notes
 

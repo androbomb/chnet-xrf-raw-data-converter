@@ -1,7 +1,7 @@
 # Deploy — Docker
 
 **Status:** NOT TESTED (recipe is a template; run it and fill the result log).
-CPU-only JAX: no GPU passthrough.
+CPU-only (numpy, no torch/pandas/JAX): no GPU passthrough.
 
 ## Steps
 
@@ -24,8 +24,7 @@ CPU-only JAX: no GPU passthrough.
    `load_*` entry point.) Or empty (no env, no bind): the app starts with
    "no data loaded" and the user uploads a file or pastes a link in the UI.
 
-3. Open `http://localhost:8765`. First request compiles the JAX reductions —
-   a few seconds of wait is expected.
+3. Open `http://localhost:8765`.
 
 ## Notes
 

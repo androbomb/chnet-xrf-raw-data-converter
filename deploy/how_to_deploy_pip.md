@@ -1,8 +1,9 @@
 # Deploy with pip / PyPI
 
-This is the pip-based alternative to the repository's `uv` workflow. It is a
-deployment guide and release checklist; **the project is not published on
-PyPI yet** — `pip install «package-name»` works only after the first release.
+This is the pip-based alternative to the repository's `uv` workflow.
+**Contract: PyPI/TestPyPI publishing is blocked** — the steps below become
+active only if the user lifts that block. Distribution name
+(`pyproject.toml`): `raw-xrf-to-h5-opener-python`; import name: `xrfraw`.
 
 ## End-user install (after publication)
 
@@ -12,21 +13,18 @@ python -m venv .venv
 . .venv/bin/activate
 # Windows PowerShell: .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install «package-name»
+python -m pip install raw-xrf-to-h5-opener-python
 python -m pip install ipykernel
-python -m ipykernel install --user --name «pkg»-viz \
-  --display-name "Python («package-name»)"
+python -m ipykernel install --user --name xrf-raw \
+  --display-name "Python 3.12 (xrf-raw)"
 ```
 
-Select the named kernel in Jupyter, then follow the notebook pattern in
-`README.md`: load the data, `build_app(path)`,
-`app.run(jupyter_mode="inline", debug=False, jupyter_height=1000)`.
+Select the named kernel in Jupyter, then open `example.ipynb` (§1 CLI,
+§2 UI inline: `build_app()`,
+`app.run(jupyter_mode="inline", debug=False, jupyter_height=800)`).
 
-The default install uses the project's `jax` dependency (CPU). GPU JAX is
-platform/CUDA-specific; use the current JAX installation instructions rather
-than assuming the generic pip package enables a GPU. See
-`deploy/uv/README.md` for the project's tested CPU path and the untested GPU
-variant.
+The project is CPU-only (numpy + h5py; no torch/pandas/JAX — see
+`scientific_notes.md`); there is no GPU variant to install.
 
 ## Before the first release
 
@@ -35,7 +33,8 @@ variant.
    NOT reserve the name; recheck immediately before publishing. The
    distribution name and the source import name may differ (`«package-name»`
    vs `«pkg»`), so the source directory does not need renaming.
-2. MIT is recorded in `LICENSE` and `pyproject.toml`. Verify the copyright
+2. MIT is recorded in `LICENSE` (the `pyproject.toml` license field is not
+   set yet). Verify the copyright
    notice matches the actual rights holder before the first release, and
    review licenses of any material added to the package.
 3. Confirm the project URLs and supported Python classifiers in

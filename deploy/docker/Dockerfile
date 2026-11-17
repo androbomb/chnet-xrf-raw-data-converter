@@ -1,4 +1,4 @@
-# «APP_NAME» — CPU-only JAX runtime. NOT TESTED until run in your environment.
+# raw-xrf-to-h5-opener-python — CPU-only (numpy) runtime. NOT TESTED until run in your environment.
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app

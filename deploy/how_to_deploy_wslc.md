@@ -1,7 +1,7 @@
 # Deploy — WSLC (WSL Container, Windows/WSL2)
 
 **Status:** NOT TESTED (template; run it and fill the result log).
-Same image as `../docker/`, built with the `wslc` CLI. CPU-only JAX.
+Same image as `../docker/`, built with the `wslc` CLI. CPU-only (numpy, no GPU).
 
 ## Build (context = repository root)
 

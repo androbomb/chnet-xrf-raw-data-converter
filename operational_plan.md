@@ -1,8 +1,8 @@
 # raw-xrf-to-h5-opener-python — operational plan
 
-Status: M5 (2026-11-17) — lettore (M1), processing (M2), io/CLI (M3),
-pipeline E2E sui file reali (M4: F1/F7) e UI minimale Dash (M5) chiusi;
-packaging/deploy in M6.
+Status: M6 (2026-11-17) — TUTTE le milestone chiuse: lettore (M1),
+processing (M2), io/CLI (M3), pipeline E2E reali (M4: F1/F7), UI minimale
+Dash (M5), packaging + CI (M6; esecuzione CI UNVERIFIED — repo privato).
 
 ## 1. Scope (KEEP / REMOVE / ADD / DEFER)
 
@@ -87,9 +87,11 @@ rebin(ds, size, how="sum"|"mean") -> Dataset
   validazione/metadati/calibrazione nota, imposta m/q (provenance user),
   sceglie formato, scarica output. Pipeline condivisa `io.convert_file`
   (CLI + UI). Test headless + server smoke (49 test: 47 fast + 2 slow).
-- **M6**: packaging (hatchling wheel/sdist locale), deploy recipe con status
-  (uv verificata; docker/apptainer/wslc NOT TESTED — no daemon qui),
-  `ci.yml` preparato ma UNVERIFIED, **niente** PyPI/TestPyPI.
+- **M6 (chiuso)**: packaging: wheel+sdist hatchling (`uv build`) verificati
+  in venv pulito (entrypoint + import UI, dev-only escluso); deploy recipe
+  con status (uv/pip verificati; docker/apptainer/wslc NOT TESTED — no
+  daemon qui); `ci.yml` pushato ma **UNVERIFIED** (repo privato, no gh CLI
+  qui); **niente** PyPI/TestPyPI.
 
 ## 5. Criteri di accettazione
 

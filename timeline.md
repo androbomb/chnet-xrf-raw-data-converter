@@ -97,3 +97,12 @@ Append-only, dated decisions and changes. Entry format:
   dash>=4.5, dash-bootstrap-components>=2.0.4. Suite: 47 fast + 2 slow.
   Commit M5, push origin. (evidence: tests/test_ui.py, to_do.md
   verification log M5)
+- 2026-11-17 — M6 chiuso: packaging + CI. `uv build` (hatchling) → wheel
+  + sdist; wheel verificato in venv pulito (entrypoint
+  `xrf-raw-to-h5 --version` → 0.1.0, `import xrfraw.ui` + build_app ok,
+  runtime deps complete, dev-only escluso). `.github/workflows/ci.yml`
+  creato (uv sync --dev, pytest -q fast; slow auto-skip senza data) e
+  pushato — esecuzione **UNVERIFIED** (repo privato, no gh CLI in questo
+  ambiente). Deploy recipe già in place con status onesti (docker/
+  apptainer/wslc NOT TESTED). Nessun push PyPI/TestPyPI (contratto).
+  Commit M6, push origin. (evidence: to_do.md verification log M6, dist/)

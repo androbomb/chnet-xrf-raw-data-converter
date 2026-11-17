@@ -5,10 +5,10 @@ di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC, assi
 spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
 energia come **allegato** (`energy[i] = m·i + q`, conteggi element-identical).
 
-**Status: M5 (2026-11-17) — converter completo (reader A/B, processing,
-writer NPZ/HDF5, CLI) verificato end-to-end sui 2 file reali (F1/F7) +
-UI minimale Dash (`xrfraw.ui.build_app`, embeddabile in Jupyter);
-49 test: 47 fast + 2 slow.**
+**Status: M6 (2026-11-17) — converter + UI completi (49 test: 47 fast +
+2 slow); packaging locale verificato (wheel in venv pulito); CI workflow
+pushato ma esecuzione UNVERIFIED (repo privato); PyPI/TestPyPI fuori
+contratto. Tutte le milestone chiuse.**
 
 ## Cosa fa
 
@@ -82,7 +82,9 @@ calibrazione nota, permette di impostare m/q esplicitamente (provenance
   (`legacy_audit.md`); crash legacy sul formato B riprodotto (ParseError,
   2026-11-17).
 - **UNVERIFIED**: NC strumentale 16384 (N1); unità µm/µm/s (N4); deploy
-  docker/apptainer/wslc (NOT TESTED, no daemon in questo ambiente); CI (M6).
+  docker/apptainer/wslc (NOT TESTED, no daemon in questo ambiente);
+  esecuzione CI (workflow pushato, repo privato — da verificare su
+  GitHub Actions).
 
 ## Layout e repo map
 

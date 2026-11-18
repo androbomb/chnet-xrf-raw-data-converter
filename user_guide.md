@@ -125,9 +125,12 @@ app.run(jupyter_mode="inline", debug=False, jupyter_height=800)  # notebook
   selezionando): era il *forced dark mode* del browser che inverte la
   pagina — l'app ora dichiara `color-scheme: light` + colori espliciti su
   campi e dropdown (fix negli ultimi push: `git pull` + *Restart kernel*).
-- Un solo Convert alla volta (lock); il click dà status immediato
-  "conversione in corso" — se lo vedevi come "non fa nulla" era l'iframe
-  morto di sopra, non il callback.
+- Un solo Convert alla volta (lock): durante la conversione appare lo
+  spinner (lato client, immediato); il tasto non viene più disabilitato,
+  un secondo click risponde "già in corso". Il callback di Convert è
+  **uno solo** (come Load): col proxy iframe instabile bastava un
+  round-trip perso dei due precedenti per sembrare un tasto morto, e il
+  vecchio "disabled" poteva restare bloccato senza modo di risalire.
 
 ## 9. Numeri reali (WSL, single-thread)
 

@@ -112,9 +112,12 @@ def _update(app, outputs, inputs, state, changed):
     spec = [f"{o['id']}.{o['property']}" for o in outputs]
     # chiave come dash._utils.create_callback_id: singolo -> "id.prop", multi -> "..id.prop...id.prop.."
     out_key = spec[0] if len(spec) == 1 else ".." + "...".join(spec) + ".."
+    # body Dash 4 (types.CallbackExecutionBody): output singolo -> target unico,
+    # multi -> lista; una lista anche per un singolo fa 500 in _prepare_response
+    out_body = outputs[0] if len(outputs) == 1 else outputs
     body = {
         "output": out_key,
-        "outputs": outputs,
+        "outputs": out_body,
         "inputs": inputs,
         "changedPropIds": changed,
         "state": state,
@@ -125,8 +128,9 @@ def _update(app, outputs, inputs, state, changed):
 
 
 def test_convert_callback_http_roundtrip(tmp_path):
-    # E2E headless: click su Convert via HTTP -> file scritto, tasto riabilitato,
-    # feedback immediato ("conversione in corso") visibile al click.
+    # E2E headless: click su Convert via HTTP (un solo callback, come Load)
+    # -> file scritto + status OK. Doppio click coperto dal lock.
+    import xrfraw.ui.app as uiapp
     p = tmp_path / "a.txt"
     write_format_a(p, GRID32, PIXELS)
     out_h5 = tmp_path / "o.h5"
@@ -147,23 +151,23 @@ def test_convert_callback_http_roundtrip(tmp_path):
         {"id": "in-overwrite", "property": "value", "value": ["overwrite"]},
     ]
     resp = _update(app,
-                   [{"id": "btn-convert", "property": "disabled"},
-                    {"id": "btn-convert", "property": "children"},
-                    {"id": "out-status", "property": "children"}],
+                   [{"id": "out-status", "property": "children"}],
                    [{"id": "btn-convert", "property": "n_clicks", "value": 1}],
                    state, ["btn-convert.n_clicks"])
     assert out_h5.is_file()
-    assert resp["btn-convert"]["disabled"] is False
     assert "OK" in json.dumps(resp["out-status"]["children"])
-    # feedback immediato: al click, tasto disabilitato + etichetta "in corso"
-    resp = _update(app,
-                   [{"id": "btn-convert", "property": "disabled"},
-                    {"id": "btn-convert", "property": "children"}],
-                   [{"id": "btn-convert", "property": "n_clicks", "value": 2}],
-                   [{"id": "in-path", "property": "value", "value": str(p)}],
-                   ["btn-convert.n_clicks"])
-    assert resp["btn-convert"]["disabled"] is True
-    assert "conversione in corso" in json.dumps(resp["btn-convert"]["children"])
+    # doppio click: il tasto non viene piu' disabilitato, il lock risponde
+    # "già in corso"
+    uiapp._CONVERT_LOCK.acquire()
+    try:
+        resp = _update(app,
+                       [{"id": "out-status", "property": "children"}],
+                       [{"id": "btn-convert", "property": "n_clicks", "value": 2}],
+                       state, ["btn-convert.n_clicks"])
+        assert "già in corso" in json.dumps(resp["out-status"]["children"],
+                                     ensure_ascii=False)
+    finally:
+        uiapp._CONVERT_LOCK.release()
 
 def test_index_declares_light_color_scheme():
     # Forced dark mode del browser: i campi erano bianco-su-bianco
@@ -203,9 +207,7 @@ def test_download_route_serves_last_output(tmp_path):
         {"id": "in-overwrite", "property": "value", "value": ["overwrite"]},
     ]
     _update(app,
-            [{"id": "btn-convert", "property": "disabled"},
-             {"id": "btn-convert", "property": "children"},
-             {"id": "out-status", "property": "children"}],
+            [{"id": "out-status", "property": "children"}],
             [{"id": "btn-convert", "property": "n_clicks", "value": 1}],
             state, ["btn-convert.n_clicks"])
     r = client.get("/xrfraw-download")

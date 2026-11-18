@@ -230,8 +230,9 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                     placement="top"),
         dbc.Tooltip("Spento: il writer rifiuta di sovrascrivere un file esistente.",
                     target="in-overwrite", placement="top"),
-        dbc.Tooltip("Lancia convert_file. Durante la conversione appare lo spinner e "
-                    "il tasto si disabilita (i file grandi richiedono minuti).",
+        dbc.Tooltip("Lancia convert_file. Durante la conversione appare lo spinner "
+                    "(i file grandi richiedono minuti); un secondo click "
+                    "risponde 'già in corso'.",
                     target="btn-convert", placement="top"),
         dbc.Tooltip("Scarica l'output dell'ultimo Convert riuscito.", target="btn-download",
                     placement="top"),
@@ -279,26 +280,13 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
         # sempre si vede in iframe notebook, qui invece si vede sempre.
         return str(dest), f"Caricato: {dest} ({dest.stat().st_size / 1e6:.0f} MB)"
 
-    @app.callback([Output("btn-convert", "disabled"), Output("btn-convert", "children")],
-                  [Input("btn-convert", "n_clicks")],
-                  [State("in-path", "value")],
-                  prevent_initial_call=True)
-    def _on_convert_start(_n, path):
-        # Feedback immediato al click: tasto spento + etichetta "in corso".
-        # Gli outputs NON coincidono con quelli di _on_convert: Dash chiavia
-        # i callback per (outputs, inputs) e due callback identici si
-        # sovrascrivono (500 al dispatch).
-        path = (path or "").strip()
-        try:
-            sz = (f" ({Path(path).stat().st_size / 1e6:.0f} MB)"
-                  if path and Path(path).is_file() else "")
-        except OSError:
-            sz = ""
-        return True, html.Span(f"⏳ conversione in corso{sz} — "
-                               f"può richiedere minuti sui file grandi")
-
-    @app.callback([Output("btn-convert", "disabled"), Output("btn-convert", "children"),
-                   Output("out-status", "children")],
+    # UN solo callback (stessa forma di Load, che funziona anche col proxy
+    # iframe instabile): due callback sullo stesso click = due round-trip,
+    # e basta uno perso per sembrare un tasto morto. Lo spinner "in corso"
+    # lo dà dcc.Loading (lato client, zero round-trip); il doppio click è
+    # coperto da _CONVERT_LOCK. Il tasto non viene mai disabilitato: non
+    # esiste stato che possa restare bloccato.
+    @app.callback(Output("out-status", "children"),
                   [Input("btn-convert", "n_clicks")],
                   [State("in-path", "value"), State("in-out", "value"),
                    State("in-fmt", "value"), State("in-nc", "value"),
@@ -312,12 +300,12 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                     m, q, compress, overwrite):
         path = (path or "").strip()
         if not path:
-            return False, "Convert", _alert("Indica il file raw: upload, load from link o path_to_file",
-                                            "warning")
+            return _alert("Indica il file raw: upload, load from link o path_to_file",
+                          "warning")
         if not Path(path).is_file():
-            return False, "Convert", _alert(f"File non trovato: {path}", "danger")
+            return _alert(f"File non trovato: {path}", "danger")
         if not _CONVERT_LOCK.acquire(blocking=False):
-            return False, "Convert", _alert("Una conversione è già in corso", "warning")
+            return _alert("Una conversione è già in corso", "warning")
         try:
             # i campi vuoti arrivano come "" (placeholder != value): parsing difensivo,
             # ogni errore è un alert rosso, non un 500 che rompe la UI
@@ -333,10 +321,10 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                                        rebin_to, cal, compress,
                                        "overwrite" in (overwrite or []))
         except Exception as e:
-            return False, "Convert", _alert(f"Conversione fallita: {e}", "danger")
+            return _alert(f"Conversione fallita: {e}", "danger")
         finally:
             _CONVERT_LOCK.release()
-        return False, "Convert", _alert(summary, "success")
+        return _alert(summary, "success")
 
     @app.server.route("/xrfraw-download")
     def _xrfraw_download():

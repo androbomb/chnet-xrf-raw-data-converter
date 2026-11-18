@@ -1,11 +1,12 @@
 # Deploy with pip / PyPI
 
-This is the pip-based alternative to the repository's `uv` workflow.
-**Contract: PyPI/TestPyPI publishing is blocked** — the steps below become
-active only if the user lifts that block. Distribution name
-(`pyproject.toml`): `raw-xrf-to-h5-opener-python`; import name: `xrfraw`.
+**Contract (2026-11-18, emendamento utente): la pubblicazione PyPI è
+ABILITATA** e preparata con Trusted Publishing (OIDC). Distribution name:
+`chnet-xrf-raw-data-converter`; import name: `xrfraw`; CLI:
+`xrf-raw-to-h5`. Le versioni PyPI sono **immobili**: un numero pubblicato
+non viene mai ripubblicato.
 
-## End-user install (after publication)
+## End-user install (dopo la pubblicazione)
 
 ```bash
 python -m venv .venv
@@ -13,56 +14,48 @@ python -m venv .venv
 . .venv/bin/activate
 # Windows PowerShell: .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install raw-xrf-to-h5-opener-python
+python -m pip install "chnet-xrf-raw-data-converter[ui]"
 python -m pip install ipykernel
 python -m ipykernel install --user --name xrf-raw \
   --display-name "Python 3.12 (xrf-raw)"
 ```
 
-Select the named kernel in Jupyter, then open `example.ipynb` (§1 CLI,
-§2 UI inline: `build_app()`,
+- core: `numpy`, `h5py`, `tqdm` (CPU-only — nessun torch/pandas/JAX,
+  vedi `scientific_notes.md`);
+- extra `[ui]`: `dash>=4.5`, `dash-bootstrap-components>=2.0.4` (solo per
+  `from xrfraw.ui import build_app` e `example.ipynb`);
+- `ipykernel` si installa a parte solo se serve il kernel nominato `xrf-raw`
+  in Jupyter.
+
+Selezionare il kernel nominato in Jupyter, poi aprire `example.ipynb`
+(§1 CLI, §2 API, §3 UI inline: `build_app()`,
 `app.run(jupyter_mode="inline", debug=False, jupyter_height=800)`).
 
-The project is CPU-only (numpy + h5py; no torch/pandas/JAX — see
-`scientific_notes.md`); there is no GPU variant to install.
+## Release workflow (Trusted Publishing, nessun token PyPI)
 
-## Before the first release
+1. L'agent fa: bump versione in `pyproject.toml`, `uv lock`, test suite
+   verde, commit `release: bump to X.Y.Z`, push `master`, tag `vX.Y.Z` sul
+   commit di bump, push del tag.
+2. Configurazione **una tantum** (utente, da web): PyPI → Project
+   `chnet-xrf-raw-data-converter` → *Add a new publisher* con
+   owner `androbomb`, repo `chnet-xrf-raw-data-converter`, workflow
+   `publish.yml`; idem per TestPyPI con workflow `publish-testpypi.yml`.
+   Su GitHub: *Settings → Environments* con gli ambienti `pypi` e
+   `testpypi` (opzionale ma consigliato, per il gate di revisione).
+   Guida: <https://docs.pypi.org/trusted-publishers/>.
+3. Per ogni release l'utente invoca, da *Actions*:
+   - `Publish to TestPyPI` (input: `vX.Y.Z`) → l'agent verifica su
+     `https://test.pypi.org/pypi/chnet-xrf-raw-data-converter/json` e
+     installa la wheel in venv pulito (con `--no-cache`, la cache uv
+     globale può servire l'index stantio);
+   - `Publish to PyPI` (input: `vX.Y.Z`) → l'agent verifica
+     `https://pypi.org/pypi/chnet-xrf-raw-data-converter/json`, installa
+     la versione esatta in venv pulito e fa lo smoke test (import +
+     `convert_file` + `build_app`);
+   - *Releases* → "Draft a new release" sul tag esistente.
+4. I workflow `publish*.yml` sono **solo** `workflow_dispatch`: un push o
+   un tag non pubblicano mai nulla da soli.
 
-1. Check the distribution name on PyPI's JSON endpoint
-   (`https://pypi.org/pypi/«package-name»/json` — 404 = unlisted). This does
-   NOT reserve the name; recheck immediately before publishing. The
-   distribution name and the source import name may differ (`«package-name»`
-   vs `«pkg»`), so the source directory does not need renaming.
-2. MIT is recorded in `LICENSE` (the `pyproject.toml` license field is not
-   set yet). Verify the copyright
-   notice matches the actual rights holder before the first release, and
-   review licenses of any material added to the package.
-3. Confirm the project URLs and supported Python classifiers in
-   `pyproject.toml`. Keep `requires-python` as the range CI actually tests.
-4. Build wheel and sdist with Hatchling; inspect both archives to confirm
-   any package data files ship with the package (CI already asserts this).
-   Run `twine check`, install the wheel in a clean venv, and smoke-test the
-   imports and the `build_app(...)` factory.
-5. Run the test suite on each supported Python version and verify dependency
-   resolution with pip.
-
-## Release workflow
-
-1. CI tests the supported Python versions and builds wheel + sdist on pushes
-   and pull requests. Release only from a reviewed `v<version>` tag matching
-   `[project].version`; PyPI releases are immutable — never reuse a published
-   version.
-2. Rehearse the artifact on TestPyPI (`publish-testpypi.yml`) and install it
-   in a clean environment.
-3. Configure PyPI Trusted Publishing: owner `<owner>`, repository
-   `<repo>`, workflow `publish.yml`, GitHub environment `pypi` (and
-   `testpypi` for the rehearsal). Use GitHub Actions OIDC and PyPA's
-   supported publishing action — no long-lived PyPI token. See the
-   [PyPI Trusted Publishing guide](https://docs.pypi.org/trusted-publishers/).
-4. For each release: build and validate artifacts, create/push the version
-   tag, then manually run the protected `Publish to PyPI` workflow for that
-   tag. It is intentionally not triggered by an ordinary push or tag push.
-   Verify the project page and install the exact version with pip.
-
-Publishing is a separate, explicit release action; preparing this guide does
-not upload anything to PyPI.
+Nota TestPyPI: se un install da TestPyPI fallisce la risoluzione delle
+dipendenze transitive, usare `--extra-index-url https://pypi.org/simple`
+con `--index-strategy unsafe-best-match`.

@@ -1,4 +1,4 @@
-# To-do — raw-xrf-to-h5-opener-python
+# To-do — chnet-xrf-raw-data-converter
 
 ## Now
 - [x] M1: reader A/B 2-passate + metadati + griglia + validazione + test

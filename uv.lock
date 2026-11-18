@@ -147,6 +147,48 @@ wheels = [
 ]
 
 [[package]]
+name = "chnet-xrf-raw-data-converter"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "h5py" },
+    { name = "numpy" },
+    { name = "tqdm" },
+]
+
+[package.optional-dependencies]
+ui = [
+    { name = "dash" },
+    { name = "dash-bootstrap-components" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "dash" },
+    { name = "dash-bootstrap-components" },
+    { name = "ipykernel" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dash", marker = "extra == 'ui'", specifier = ">=4.5" },
+    { name = "dash-bootstrap-components", marker = "extra == 'ui'", specifier = ">=2.0.4" },
+    { name = "h5py" },
+    { name = "numpy" },
+    { name = "tqdm" },
+]
+provides-extras = ["ui"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "dash", specifier = ">=4.5" },
+    { name = "dash-bootstrap-components", specifier = ">=2.0.4" },
+    { name = "ipykernel" },
+    { name = "pytest" },
+]
+
+[[package]]
 name = "click"
 version = "8.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -809,37 +851,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/a7/cf/caa0bd5f7a1b139b9240faf3b34586867656f682774364101572e8e84f80/pyzmq-27.3.0-pp312-pypy312_pp80-manylinux_2_28_i686.whl", hash = "sha256:cdb5efd4c23465573e928fb8429e40996ac0e1a4809365efe19e2753112b6ee1", size = 821382, upload-time = "2026-11-04T00:31:19.451Z" },
     { url = "https://files.pythonhosted.org/packages/8e/34/81fa1d9701024eb4f48949ba5f93da3a063ab997e0e0c9787ff37f11ecda/pyzmq-27.3.0-pp312-pypy312_pp80-win_amd64.whl", hash = "sha256:1b7ab96158dd50d7e6e430e6e4f744aaccee1df2e9d167ace9e7d2f3e3051712", size = 564187, upload-time = "2026-11-04T00:31:21.486Z" },
 ]
-
-[[package]]
-name = "raw-xrf-to-h5-opener-python"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "dash" },
-    { name = "dash-bootstrap-components" },
-    { name = "h5py" },
-    { name = "ipykernel" },
-    { name = "numpy" },
-    { name = "tqdm" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "dash", specifier = ">=4.5" },
-    { name = "dash-bootstrap-components", specifier = ">=2.0.4" },
-    { name = "h5py" },
-    { name = "ipykernel" },
-    { name = "numpy" },
-    { name = "tqdm" },
-]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pytest" }]
 
 [[package]]
 name = "requests"

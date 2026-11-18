@@ -224,3 +224,22 @@ Append-only, dated decisions and changes. Entry format:
   `outputs` come target singolo per i callback single-output, lista per i
   multi — `types.CallbackExecutionBody`). E2E live 8051: convert
   mappa11 18.4 s OK → download 21.3 MB byte-identico (sha256 uguale).
+
+## PyPI packaging prep (2026-11-18)
+
+Contratto emendato dall'utente: PyPI sbloccato, "iniziamo a preparare la
+strada verso un push su PyPI, con nome chnet-xrf-raw-data-converter".
+Nome disponibile su PyPI (404 su pypi.org/pypi/chnet-xrf-raw-data-converter/json).
+Cambi: `pyproject.toml` riscritto (dist name `chnet-xrf-raw-data-converter`,
+license MIT PEP 639, autori, classifiers, project.urls, UI come extra
+`[ui]`, `ipykernel` → dev group); `LICENSE` copyright Alessandro Bombini;
+`xrfraw.__version__` da importlib.metadata (no drift, test dedicato);
+CI → matrix 3.12/3.13 + `uv sync --locked` + `uv build` + twine check +
+smoke wheel in venv pulito + artifact; nuovi workflow `publish.yml` /
+`publish-testpypi.yml` (solo workflow_dispatch, OIDC Trusted Publishing,
+environment `pypi`/`testpypi`, pattern dash-xrf-visualizer);
+`deploy/how_to_deploy_pip.md` riscritta (blocco rimosso, procedura
+release); `CITATION.cff` aggiunto; README/operational_plan/to_do al nuovo
+nome. Resterà all'utente (web): configurazione Trusted Publishing su
+PyPI/GitHub + dispatch dei workflow — i push e i tag non pubblicano mai
+da soli.

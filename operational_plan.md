@@ -1,4 +1,4 @@
-# raw-xrf-to-h5-opener-python — operational plan
+# chnet-xrf-raw-data-converter (import: xrfraw) — operational plan
 
 Status: M6 (2026-11-17) — TUTTE le milestone chiuse: lettore (M1),
 processing (M2), io/CLI (M3), pipeline E2E reali (M4: F1/F7), UI minimale
@@ -147,7 +147,7 @@ README (stato onesto: verified vs UNVERIFIED).
   opzione esplicita off di default (D4, N3).
 - **Q4** dtype come opzione utente, default uint32. ✓ (D5)
 - **Q5** formato B: griglia inferita + metadati esterni opzionali. ✓ (D1)
-- **Q6** import `xrfraw`, dist `raw-xrf-to-h5-opener-python`. ✓
+- **Q6** import `xrfraw`, dist PyPI `chnet-xrf-raw-data-converter`. ✓
 - **Q7** unità µm/µm/s come default, da chiedere all'utente. ✓ (→ N4)
 - **Q8** M4: pipeline completa sui 2 file reali, single-thread. ✓
 

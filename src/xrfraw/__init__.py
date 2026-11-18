@@ -3,7 +3,13 @@
 No side effects on import. See README.md and the docs at the repository root.
 """
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version as _dist_version
+
+try:
+    # mai hardcodato: deriva dai metadati del dist installato (no drift)
+    __version__ = _dist_version("chnet-xrf-raw-data-converter")
+except PackageNotFoundError:  # checkout di sorgente non installato
+    __version__ = "0.1.0"
 
 from .dataset import Dataset
 from .data import inspect_raw, read_raw

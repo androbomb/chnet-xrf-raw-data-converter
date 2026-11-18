@@ -2,18 +2,42 @@ name: CI
 
 on:
   push:
-    branches: [master]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  test-and-build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
-      - run: uv python install 3.12
-      - run: uv sync --dev
-      - name: "Fast suite (slow auto-skips: data_example/ non in repo)"
-        run: uv run pytest -q
+      - run: uv python install ${{ matrix.python-version }}
+      - run: uv sync --locked --python ${{ matrix.python-version }}
+      - run: uv run --locked --python ${{ matrix.python-version }} pytest -q
+      - run: uv build
+      - name: Validate built distributions
+        run: |
+          uvx --from twine twine check dist/*
+          python - <<'PY'
+          import zipfile
+          from pathlib import Path
+
+          wheel = list(Path("dist").glob("*.whl"))[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          for required in ("xrfraw/__init__.py", "xrfraw/cli.py", "xrfraw/ui/app.py"):
+              assert any(n.endswith(required) for n in names), f"manca nel wheel: {required}"
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-py${{ matrix.python-version }}
+          path: dist/*
+          if-no-files-found: error

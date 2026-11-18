@@ -70,6 +70,12 @@ User request (2026-11-17, Telegram):
 (origin) è **consentito** — si pusha a ogni chiusura milestone; resta
 **bloccato solo il push verso PyPI/TestPyPI**.
 
+**Emendamento contratto (2026-11-18, utente)**: la pubblicazione PyPI è
+**abilitata** — dist name `chnet-xrf-raw-data-converter`, via Trusted
+Publishing (OIDC, workflow `publish*.yml` solo `workflow_dispatch`). I
+push/tag non pubblicano mai da soli; il dispatch dei workflow è azione
+esplicita dell'utente da web. Vedi `deploy/how_to_deploy_pip.md`.
+
 Goal: una libreria + CLI snella e testata che converte raw MA-XRF
 (Fi MA-XRF, INFN-CHNet) in NPZ/HDF5 (cubo `(y, x, channel)` + assi + mask +
 metadati), con calibrazione energia element-identical (`energy[i]=m·i+q`,
@@ -155,7 +161,10 @@ via `to_plotly_json()`). No JAX here.
 - Git push verso origin: **consentito** (emendamento 2026-11-17) — push a
   ogni chiusura milestone.
 - PyPI/TestPyPI releases are immutable: never reuse a published version.
-  PyPI publishing remains **forbidden** in this phase — local builds only.
+  PyPI publishing is **enabled** (emendamento 2026-11-18) via Trusted
+  Publishing: `publish.yml`/`publish-testpypi.yml` sono solo
+  `workflow_dispatch` — l'utente le invoca da web dopo che l'agent ha
+  fatto bump, `uv lock`, test, commit, tag `vX.Y.Z` e push.
 - Do not touch files the user modified that are out of scope.
 
 ## 10. End-of-task report

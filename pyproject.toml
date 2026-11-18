@@ -1,25 +1,53 @@
 [project]
-name = "raw-xrf-to-h5-opener-python"
+name = "chnet-xrf-raw-data-converter"
 version = "0.1.0"
 description = "raw MA-XRF (Fi MA-XRF, INFN-CHNet) to NPZ/HDF5 converter: faithful event cube (y, x, channel), energy calibration as attachment, acquisition mask"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Alessandro Bombini" }]
+keywords = ["xrf", "x-ray-fluorescence", "maxrf", "hdf5", "spectroscopy"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
 dependencies = [
     "numpy",
     "h5py",
     "tqdm",
-    # UI minimale (M5)
+]
+
+# UI Dash (example.ipynb) — opzionale: il core di conversione non la richiede
+[project.optional-dependencies]
+ui = [
     "dash>=4.5",
     "dash-bootstrap-components>=2.0.4",
-    # notebook (example.ipynb): kernel Jupyter "xrf-raw"
-    "ipykernel",
 ]
 
 [project.scripts]
 xrf-raw-to-h5 = "xrfraw.cli:main"
 
+[project.urls]
+Homepage = "https://github.com/androbomb/chnet-xrf-raw-data-converter"
+Repository = "https://github.com/androbomb/chnet-xrf-raw-data-converter"
+Issues = "https://github.com/androbomb/chnet-xrf-raw-data-converter/issues"
+
 [dependency-groups]
-dev = ["pytest"]
+dev = [
+    "pytest",
+    # UI (test + example.ipynb)
+    "dash>=4.5",
+    "dash-bootstrap-components>=2.0.4",
+    # notebook (example.ipynb): kernel Jupyter "xrf-raw"
+    "ipykernel",
+]
 
 [build-system]
 requires = ["hatchling"]

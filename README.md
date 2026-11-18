@@ -1,14 +1,13 @@
-# raw-xrf-to-h5-opener-python
+# chnet-xrf-raw-data-converter (import: `xrfraw`)
 
 Convertitore raw MA-XRF (Fi MA-XRF, INFN-CHNet) → NPZ/HDF5 comuni: datacube
 di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC, assi
 spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
 energia come **allegato** (`energy[i] = m·i + q`, conteggi element-identical).
 
-**Status: M6 (2026-11-17) — converter + UI completi (49 test: 47 fast +
-2 slow); packaging locale verificato (wheel in venv pulito); CI workflow
-pushato ma esecuzione UNVERIFIED (repo privato); PyPI/TestPyPI fuori
-contratto. Tutte le milestone chiuse.**
+**Status: M6 (2026-11-17) — converter + UI completi; packaging PyPI
+preparato (2026-11-18): dist name `chnet-xrf-raw-data-converter`, workflow
+Trusted Publishing in `.github/workflows/`, vedi `deploy/how_to_deploy_pip.md`.**
 
 ## Cosa fa
 
@@ -34,6 +33,15 @@ contratto. Tutte le milestone chiuse.**
 uv sync
 .venv/bin/python -m pytest -q
 ```
+
+## Install (pip, dopo la pubblicazione PyPI)
+
+```bash
+python -m pip install "chnet-xrf-raw-data-converter[ui]"
+# senza UI: python -m pip install chnet-xrf-raw-data-converter
+```
+
+Dettaglio in `deploy/how_to_deploy_pip.md`.
 
 ## Uso
 

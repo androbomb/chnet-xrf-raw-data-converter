@@ -298,6 +298,10 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                   prevent_initial_call=True)
     def _on_convert(_n, path, out_path, fmt, nc, dtype, meta, rn, how, rto,
                     m, q, compress, overwrite):
+        # log in console Jupyter (Dash silenzia werkzeug in notebook mode):
+        # a ogni click compare qui SE la request arriva al server, con i parametri
+        print(f"[xrfraw-ui] CONVERT: path={path!r} fmt={fmt!r} nc={nc!r} "
+              f"rebin={(rn, how)!r} rebin_to={rto!r} out={out_path!r}", flush=True)
         path = (path or "").strip()
         if not path:
             return _alert("Indica il file raw: upload, load from link o path_to_file",
@@ -321,6 +325,7 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                                        rebin_to, cal, compress,
                                        "overwrite" in (overwrite or []))
         except Exception as e:
+            print(f"[xrfraw-ui] CONVERT error: {type(e).__name__}: {e}", flush=True)
             return _alert(f"Conversione fallita: {e}", "danger")
         finally:
             _CONVERT_LOCK.release()

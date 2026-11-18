@@ -114,6 +114,7 @@ Vedi `operational_plan.md` §3.
 | `to_do.md` | Now/Next/Later/Blocked + verification log |
 | `timeline.md` | storico append-only datato |
 | `example.ipynb` | notebook demo: CLI + UI embeddata (Jupyter) |
+| `user_guide.md` | guida operativa: cosa fare, ingressi, parametri, limiti |
 | `deploy/` | ricetta per backend con status verificato / NOT TESTED |
 | `original_code/` | legacy di riferimento (gitignored, sola lettura) |
 | `data_example/` | 2 file di esempio (gitignored, mai caricati in massa) |

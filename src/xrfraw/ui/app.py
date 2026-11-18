@@ -20,6 +20,7 @@ from pathlib import Path
 import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, ctx, dcc, html, no_update
+from flask import Response, send_file
 
 from ..io import convert_file
 
@@ -34,6 +35,9 @@ _ACCENT_BTN = {
 }
 # Carica gli upload e gli output default: deve sopravvivere tra Convert e Download.
 _WORKDIR = Path(tempfile.gettempdir()) / "xrfraw_ui"
+# Ultimo output scritto da run_convert: Download lo serve via link diretto,
+# senza passare per lo stato client-side (che in iframe può andare perso).
+_LAST_OUT: Path | None = None
 # Upload > ~48 MB raw: il browser deve base64-il file in memoria (crash/gray screen);
 # i file grandi passano per path_to_file (già sul disco).
 _MAX_UPLOAD_B64 = 64 * 1024 * 1024
@@ -65,6 +69,8 @@ def run_convert(path, out_path, fmt, nc, dtype, meta, rebin_spec, rebin_to,
                       overwrite=bool(overwrite))
     dt = time.monotonic() - t0
     note = "calibrato" if ds.energy is not None else "non calibrato"
+    global _LAST_OUT
+    _LAST_OUT = out
     return out, (f"OK: {ds.img.shape} {ds.metadata['dtype']}, "
                  f"{ds.metadata['n_events']:,} eventi, {note}, "
                  f"{out.stat().st_size / 1e6:.1f} MB in {dt:.1f} s")
@@ -82,10 +88,15 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
     # "Forced dark mode" del browser (es. Chrome auto-dark) inverte testo e
     # sfondi: i campi diventavano bianco-su-bianco (valore presente ma invisibile).
     # color-scheme:light disattiva l'inversione; i colori espliciti sono scudo.
+    # .xrfraw-dd: i dropdown (react-select) hanno styling interno proprio —
+    # li si allinea ai campi bianchi con un override scoped.
     app.index_string = app.index_string.replace(
         "{%css%}",
-        "{%css%}\n<style>:root{color-scheme:light}"
+        "{%css%}\n<style>"
+        ":root{color-scheme:light}"
         "input,select{background-color:#fff!important;color:#212529!important}"
+        ".xrfraw-dd,.xrfraw-dd *{background-color:#fff!important;color:#212529!important}"
+        ".xrfraw-dd{border:1px solid #ccc!important}"
         "</style>")
     app.title = "xrf-raw-to-h5"
 
@@ -136,13 +147,13 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                          placeholder="/path/to/out.h5")),
         dbc.Row([
             dbc.Col(_field("fmt",
-                           dcc.Dropdown(id="in-fmt", value="h5",
+                           dcc.Dropdown(id="in-fmt", value="h5", className="xrfraw-dd",
                                         options=[{"label": v, "value": v}
                                                  for v in ("h5", "npz")])), md=4),
             dbc.Col(_field("n_channels (profondità ESATTA)",
                            dcc.Input(id="in-nc", type="number", value=16384, min=1)), md=4),
             dbc.Col(_field("dtype cubo",
-                           dcc.Dropdown(id="in-dtype", value="uint32",
+                           dcc.Dropdown(id="in-dtype", value="uint32", className="xrfraw-dd",
                                         options=[{"label": v, "value": v}
                                                  for v in ("uint32", "uint16",
                                                            "float32", "float64")])), md=4),
@@ -153,11 +164,11 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
             dbc.Col(_field("rebin size",
                            dcc.Input(id="in-rebin-n", type="number", value=2, min=2)), md=4),
             dbc.Col(_field("rebin how",
-                           dcc.Dropdown(id="in-rebin-how", value="off",
+                           dcc.Dropdown(id="in-rebin-how", value="off", className="xrfraw-dd",
                                         options=[{"label": v, "value": v}
                                                  for v in ("off", "sum", "mean")])), md=4),
             dbc.Col(_field("rebin_to (solo sum; mutually exclusive)",
-                           dcc.Dropdown(id="in-rebin-to", value="off",
+                           dcc.Dropdown(id="in-rebin-to", value="off", className="xrfraw-dd",
                                         options=[{"label": v, "value": v}
                                                  for v in ("off", "512", "1024", "2048",
                                                            "4096", "8192")])), md=4),
@@ -179,11 +190,15 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                              labelStyle={"color": "var(--bs-body-color)"})),
         dbc.Row([
             dbc.Button("Convert", id="btn-convert", color="primary", style=_ACCENT_BTN),
-            dbc.Button("Download file", id="btn-download", color="primary", style=_ACCENT_BTN),
+            # Link diretto (non callback): lo stato client-side in iframe può
+            # andare perso e il Download moriva in silenzio; qui il browser
+            # scarica il file dall'ultimo Convert riuscito, sempre.
+            html.A(dbc.Button("Download file", id="btn-download", color="primary",
+                              style=_ACCENT_BTN),
+                   href="/xrfraw-download",
+                   style={"textDecoration": "none", "display": "inline-block"}),
         ], className="mt-3 mb-2"),
-        dcc.Download(id="download"),
         dbc.Alert(id="out-status", is_open=False),
-        dcc.Store(id="file-store", data=None),
         # --- tooltip: cosa fa ogni campo (hover) ---
         dbc.Tooltip("Percorso del file raw (formato A: XML+dati; formato B: solo dati). "
                     "Oppure usa upload o Load from link sopra. Per file grandi usa SEMPRE "
@@ -264,24 +279,26 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
         # sempre si vede in iframe notebook, qui invece si vede sempre.
         return str(dest), f"Caricato: {dest} ({dest.stat().st_size / 1e6:.0f} MB)"
 
-    @app.callback([Output("btn-convert", "disabled"), Output("out-status", "children")],
+    @app.callback([Output("btn-convert", "disabled"), Output("btn-convert", "children")],
                   [Input("btn-convert", "n_clicks")],
                   [State("in-path", "value")],
                   prevent_initial_call=True)
     def _on_convert_start(_n, path):
-        # Feedback immediato al click: status + tasto spento (la conversione
-        # reale è lunga: senza questo sembrerebbe un tasto morto).
+        # Feedback immediato al click: tasto spento + etichetta "in corso".
+        # Gli outputs NON coincidono con quelli di _on_convert: Dash chiavia
+        # i callback per (outputs, inputs) e due callback identici si
+        # sovrascrivono (500 al dispatch).
         path = (path or "").strip()
         try:
             sz = (f" ({Path(path).stat().st_size / 1e6:.0f} MB)"
                   if path and Path(path).is_file() else "")
         except OSError:
             sz = ""
-        return True, html.Span(f"⏳ conversione in corso: {path or '(nessun file)'}{sz} — "
+        return True, html.Span(f"⏳ conversione in corso{sz} — "
                                f"può richiedere minuti sui file grandi")
 
-    @app.callback([Output("btn-convert", "disabled"), Output("out-status", "children"),
-                   Output("file-store", "data")],
+    @app.callback([Output("btn-convert", "disabled"), Output("btn-convert", "children"),
+                   Output("out-status", "children")],
                   [Input("btn-convert", "n_clicks")],
                   [State("in-path", "value"), State("in-out", "value"),
                    State("in-fmt", "value"), State("in-nc", "value"),
@@ -295,12 +312,12 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                     m, q, compress, overwrite):
         path = (path or "").strip()
         if not path:
-            return False, _alert("Indica il file raw: upload, load from link o path_to_file",
-                                 "warning"), no_update
+            return False, "Convert", _alert("Indica il file raw: upload, load from link o path_to_file",
+                                            "warning")
         if not Path(path).is_file():
-            return False, _alert(f"File non trovato: {path}", "danger"), no_update
+            return False, "Convert", _alert(f"File non trovato: {path}", "danger")
         if not _CONVERT_LOCK.acquire(blocking=False):
-            return False, _alert("Una conversione è già in corso", "warning"), no_update
+            return False, "Convert", _alert("Una conversione è già in corso", "warning")
         try:
             # i campi vuoti arrivano come "" (placeholder != value): parsing difensivo,
             # ogni errore è un alert rosso, non un 500 che rompe la UI
@@ -316,21 +333,18 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                                        rebin_to, cal, compress,
                                        "overwrite" in (overwrite or []))
         except Exception as e:
-            return False, _alert(f"Conversione fallita: {e}", "danger"), no_update
+            return False, "Convert", _alert(f"Conversione fallita: {e}", "danger")
         finally:
             _CONVERT_LOCK.release()
-        return False, _alert(summary, "success"), {"path": str(out), "filename": out.name}
+        return False, "Convert", _alert(summary, "success")
 
-    @app.callback(Output("download", "contents"),
-                  [Input("btn-download", "n_clicks")],
-                  [State("file-store", "data")],
-                  prevent_initial_call=True)
-    def _on_download(_n, file):
-        if not file:
-            return no_update
-        p = Path(file["path"])
-        if not p.is_file():
-            return no_update
-        return dcc.send_bytes(p.read_bytes(), filename=file["filename"])
+    @app.server.route("/xrfraw-download")
+    def _xrfraw_download():
+        # Download = link diretto all'ultimo output di run_convert: niente
+        # stato client-side, niente base64 nel callback.
+        if _LAST_OUT is None or not _LAST_OUT.is_file():
+            return Response("Nessun output da scaricare: esegui prima un Convert riuscito.",
+                            mimetype="text/plain; charset=utf-8", status=404)
+        return send_file(_LAST_OUT, as_attachment=True, download_name=_LAST_OUT.name)
 
     return app

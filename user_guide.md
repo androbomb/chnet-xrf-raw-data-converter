@@ -116,13 +116,15 @@ app.run(jupyter_mode="inline", debug=False, jupyter_height=800)  # notebook
   apri `http://127.0.0.1:8050` in una tab normale — identica, e con F12.
   Se ancora no: `Kernel → Restart` + ri-esegui la cell; poi controlla chi
   occupa la 8050 (`netstat -ano | findstr :8050` → `taskkill /PID <pid> /F`).
-- **Download file** serve l'output dall'app; il path completo del file è
-  sempre nel messaggio di status (utile se la scaricata non arriva: il
-  file c'è in `out_path`).
+- **Download file** è un link diretto all'ultimo Convert riuscito
+  (`/xrfraw-download`, scarica senza passaggi intermedi); prima di un
+  Convert riuscito risponde con un messaggio esplicito. Il path completo
+  del file è sempre nel messaggio di status (utile in ogni caso: il file
+  c'è in `out_path`).
 - **Testo invisibile nei campi** (bianco su bianco, "si vede" solo
   selezionando): era il *forced dark mode* del browser che inverte la
-  pagina — l'app ora dichiara `color-scheme: light` (fix nell'ultimo push:
-  `git pull` + *Restart kernel*).
+  pagina — l'app ora dichiara `color-scheme: light` + colori espliciti su
+  campi e dropdown (fix negli ultimi push: `git pull` + *Restart kernel*).
 - Un solo Convert alla volta (lock); il click dà status immediato
   "conversione in corso" — se lo vedevi come "non fa nulla" era l'iframe
   morto di sopra, non il callback.

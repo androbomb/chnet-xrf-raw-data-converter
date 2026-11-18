@@ -58,7 +58,7 @@ def test_build_app_components():
     need = {"upload", "url", "load-url", "in-path", "in-out", "in-fmt", "in-nc",
             "in-dtype", "in-meta", "in-rebin-n", "in-rebin-how", "in-rebin-to",
             "in-cal-m", "in-cal-q", "in-compress", "in-overwrite",
-            "btn-convert", "btn-download", "download", "out-status", "file-store"}
+            "btn-convert", "btn-download", "out-status"}
     assert need <= _ids(app.layout)
     # src precompila path_to_file (come build_app(cube) in dash-xrf-visualizer)
     assert _find(app.layout, "in-path")["value"] == "/tmp/a.txt"
@@ -148,23 +148,22 @@ def test_convert_callback_http_roundtrip(tmp_path):
     ]
     resp = _update(app,
                    [{"id": "btn-convert", "property": "disabled"},
-                    {"id": "out-status", "property": "children"},
-                    {"id": "file-store", "property": "data"}],
+                    {"id": "btn-convert", "property": "children"},
+                    {"id": "out-status", "property": "children"}],
                    [{"id": "btn-convert", "property": "n_clicks", "value": 1}],
                    state, ["btn-convert.n_clicks"])
     assert out_h5.is_file()
     assert resp["btn-convert"]["disabled"] is False
     assert "OK" in json.dumps(resp["out-status"]["children"])
-    assert resp["file-store"]["data"]["path"] == str(out_h5)
-    # feedback immediato: al click, status "in corso" + tasto disabilitato
+    # feedback immediato: al click, tasto disabilitato + etichetta "in corso"
     resp = _update(app,
                    [{"id": "btn-convert", "property": "disabled"},
-                    {"id": "out-status", "property": "children"}],
+                    {"id": "btn-convert", "property": "children"}],
                    [{"id": "btn-convert", "property": "n_clicks", "value": 2}],
                    [{"id": "in-path", "property": "value", "value": str(p)}],
                    ["btn-convert.n_clicks"])
     assert resp["btn-convert"]["disabled"] is True
-    assert "conversione in corso" in json.dumps(resp["out-status"]["children"])
+    assert "conversione in corso" in json.dumps(resp["btn-convert"]["children"])
 
 def test_index_declares_light_color_scheme():
     # Forced dark mode del browser: i campi erano bianco-su-bianco
@@ -172,4 +171,44 @@ def test_index_declares_light_color_scheme():
     app = build_app()
     html_text = app.server.test_client().get("/").get_data(as_text=True)
     assert "color-scheme:light" in html_text
+    assert ".xrfraw-dd" in html_text  # dropdown allineati ai campi bianchi
     assert "background-color:#fff!important" in html_text
+
+
+def test_download_route_serves_last_output(tmp_path):
+    # Download è un link diretto /xrfraw-download: 404 esplicito senza output,
+    # altrimenti attachment byte-identico all'ultimo convert (niente stato client).
+    import xrfraw.ui.app as uiapp
+    uiapp._LAST_OUT = None  # reset: i test precedenti lasciano un output globale
+    p = tmp_path / "a.txt"
+    write_format_a(p, GRID32, PIXELS)
+    out_h5 = tmp_path / "o.h5"
+    app = build_app(src=str(p))
+    client = app.server.test_client()
+    r = client.get("/xrfraw-download")
+    assert r.status_code == 404
+    state = [
+        {"id": "in-path", "property": "value", "value": str(p)},
+        {"id": "in-out", "property": "value", "value": str(out_h5)},
+        {"id": "in-fmt", "property": "value", "value": "h5"},
+        {"id": "in-nc", "property": "value", "value": "16"},
+        {"id": "in-dtype", "property": "value", "value": "uint32"},
+        {"id": "in-meta", "property": "value", "value": ""},
+        {"id": "in-rebin-n", "property": "value", "value": ""},
+        {"id": "in-rebin-how", "property": "value", "value": "off"},
+        {"id": "in-rebin-to", "property": "value", "value": ""},
+        {"id": "in-cal-m", "property": "value", "value": ""},
+        {"id": "in-cal-q", "property": "value", "value": ""},
+        {"id": "in-compress", "property": "value", "value": "0"},
+        {"id": "in-overwrite", "property": "value", "value": ["overwrite"]},
+    ]
+    _update(app,
+            [{"id": "btn-convert", "property": "disabled"},
+             {"id": "btn-convert", "property": "children"},
+             {"id": "out-status", "property": "children"}],
+            [{"id": "btn-convert", "property": "n_clicks", "value": 1}],
+            state, ["btn-convert.n_clicks"])
+    r = client.get("/xrfraw-download")
+    assert r.status_code == 200
+    assert "attachment" in r.headers.get("Content-Disposition", "")
+    assert r.data == out_h5.read_bytes()

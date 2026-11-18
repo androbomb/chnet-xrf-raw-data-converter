@@ -79,6 +79,14 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
     """
     app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY],
                     suppress_callback_exceptions=True)
+    # "Forced dark mode" del browser (es. Chrome auto-dark) inverte testo e
+    # sfondi: i campi diventavano bianco-su-bianco (valore presente ma invisibile).
+    # color-scheme:light disattiva l'inversione; i colori espliciti sono scudo.
+    app.index_string = app.index_string.replace(
+        "{%css%}",
+        "{%css%}\n<style>:root{color-scheme:light}"
+        "input,select{background-color:#fff!important;color:#212529!important}"
+        "</style>")
     app.title = "xrf-raw-to-h5"
 
     app.layout = dbc.Container(fluid=True, children=[

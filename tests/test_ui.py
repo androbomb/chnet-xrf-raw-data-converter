@@ -165,3 +165,11 @@ def test_convert_callback_http_roundtrip(tmp_path):
                    ["btn-convert.n_clicks"])
     assert resp["btn-convert"]["disabled"] is True
     assert "conversione in corso" in json.dumps(resp["out-status"]["children"])
+
+def test_index_declares_light_color_scheme():
+    # Forced dark mode del browser: i campi erano bianco-su-bianco
+    # (valore presente ma invisibile). La pagina deve dichiarare light.
+    app = build_app()
+    html_text = app.server.test_client().get("/").get_data(as_text=True)
+    assert "color-scheme:light" in html_text
+    assert "background-color:#fff!important" in html_text

@@ -119,6 +119,10 @@ app.run(jupyter_mode="inline", debug=False, jupyter_height=800)  # notebook
 - **Download file** serve l'output dall'app; il path completo del file è
   sempre nel messaggio di status (utile se la scaricata non arriva: il
   file c'è in `out_path`).
+- **Testo invisibile nei campi** (bianco su bianco, "si vede" solo
+  selezionando): era il *forced dark mode* del browser che inverte la
+  pagina — l'app ora dichiara `color-scheme: light` (fix nell'ultimo push:
+  `git pull` + *Restart kernel*).
 - Un solo Convert alla volta (lock); il click dà status immediato
   "conversione in corso" — se lo vedevi come "non fa nulla" era l'iframe
   morto di sopra, non il callback.

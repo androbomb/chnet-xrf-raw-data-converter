@@ -8,6 +8,8 @@ app.run(jupyter_mode="inline") — vedi example.ipynb.
 from __future__ import annotations
 
 import base64
+import hashlib
+import os
 import tempfile
 import threading
 import time
@@ -121,7 +123,7 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                          placeholder="/path/to/scan.txt (oppure upload / load from link)")),
         html.Br(),
         html.B("Parametri convert_file"),
-        _field("out_path (vuoto: temp/<stem>_<n_channels>.<fmt>)",
+        _field("out_path (vuoto: <temp>/xrfraw_ui/<nome_file>_<n_channels>.<fmt>)",
                dcc.Input(id="in-out", type="text",
                          placeholder="/path/to/out.h5")),
         dbc.Row([
@@ -178,7 +180,7 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
         dbc.Tooltip("Percorso del file raw (formato A: XML+dati; formato B: solo dati). "
                     "Oppure usa upload o Load from link sopra. Per file grandi usa SEMPRE "
                     "il percorso, non l'upload.", target="in-path", placement="top"),
-        dbc.Tooltip("Dove scrivere l'output. Vuoto: <temp>/xrfraw_ui/<nome>_<n_channels>.<fmt> "
+        dbc.Tooltip("Dove scrivere l'output. Se vuoto: <temp>/xrfraw_ui/<nome_file>_<n_channels>.<fmt> "
                     "(poi Download file).", target="in-out", placement="top"),
         dbc.Tooltip("Formato output: h5 (HDF5) o npz.", target="in-fmt", placement="top"),
         dbc.Tooltip("Profondità ESATTA di lettura: l'output è (y, x, n_channels). "
@@ -227,11 +229,17 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                 url = (url or "").strip()
                 if not url:
                     return no_update, "Inserisci prima l'URL"
-                name = Path(urllib.parse.urlparse(url).path).name or "raw.txt"
+                name = Path(urllib.parse.urlparse(url).path).name or "download"
+                if "." not in name:
+                    # link stile ownCloud ("/download"): nome unico per URL,
+                    # altrimenti ogni caricamento sovrascrive il file precedente
+                    name = f"download_{hashlib.sha1(url.encode()).hexdigest()[:8]}.txt"
                 _WORKDIR.mkdir(parents=True, exist_ok=True)
                 dest = _WORKDIR / name
+                part = dest.with_suffix(dest.suffix + ".part")
                 with urllib.request.urlopen(url) as r:
-                    dest.write_bytes(r.read())
+                    part.write_bytes(r.read())
+                os.replace(part, dest)  # atomico: un download interrotto non lascia un file tronco
             elif contents:
                 _, b64 = contents.split(",", 1)
                 if len(b64) > _MAX_UPLOAD_B64:
@@ -244,7 +252,9 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                 return no_update, no_update
         except Exception as e:
             return no_update, f"Caricamento fallito: {e}"
-        return str(dest), f"Caricato {dest.name} -> path_to_file"
+        # Il messaggio e' autocontenuto (path + size): il valore di in-path non
+        # sempre si vede in iframe notebook, qui invece si vede sempre.
+        return str(dest), f"Caricato: {dest} ({dest.stat().st_size / 1e6:.0f} MB)"
 
     @app.callback([Output("btn-convert", "disabled"), Output("out-status", "children")],
                   [Input("btn-convert", "n_clicks")],

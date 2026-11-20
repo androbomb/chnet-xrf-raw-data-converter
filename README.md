@@ -5,9 +5,10 @@ di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC, assi
 spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
 energia come **allegato** (`energy[i] = m·i + q`, conteggi element-identical).
 
-**Status: M6 (2026-11-17) — converter + UI completi; packaging PyPI
-preparato (2026-11-18): dist name `chnet-xrf-raw-data-converter`, workflow
-Trusted Publishing in `.github/workflows/`, vedi `deploy/how_to_deploy_pip.md`.**
+**Status: M6 (2026-11-17) — converter + UI completi; v0.1.0 pubblicato su
+PyPI e TestPyPI (2026-11-18): dist name `chnet-xrf-raw-data-converter`,
+workflow Trusted Publishing in `.github/workflows/`, vedi
+`deploy/how_to_deploy_pip.md`.**
 
 ## Cosa fa
 
@@ -34,7 +35,7 @@ uv sync
 .venv/bin/python -m pytest -q
 ```
 
-## Install (pip, dopo la pubblicazione PyPI)
+## Install (pip)
 
 ```bash
 python -m pip install "chnet-xrf-raw-data-converter[ui]"
@@ -101,11 +102,9 @@ usa `path_to_file`.
   (`data_format.md` §4, 5 passate streaming: eventi 19 825 090 / 56 661 209,
   max canale 15902/15999, griglie, anomalie localizzate); audit del legacy
   (`legacy_audit.md`); crash legacy sul formato B riprodotto (ParseError,
-  2026-11-17).
+  2026-11-17); CI verde su GitHub Actions (push + publish v0.1.0, 2026-11-18).
 - **UNVERIFIED**: NC strumentale 16384 (N1); unità µm/µm/s (N4); deploy
-  docker/apptainer/wslc (NOT TESTED, no daemon in questo ambiente);
-  esecuzione CI (workflow pushato, repo privato — da verificare su
-  GitHub Actions).
+  docker/apptainer/wslc (NOT TESTED, no daemon in questo ambiente).
 
 ## Layout e repo map
 

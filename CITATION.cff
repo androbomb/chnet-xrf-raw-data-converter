@@ -6,6 +6,7 @@ description: "Converter raw MA-XRF (Fi MA-XRF, INFN-CHNet) to NPZ/HDF5: faithful
 authors:
   - name: "Alessandro Bombini"
 version: 0.1.0
+date-released: 2026-11-18
 license: MIT
 repository-code: "https://github.com/androbomb/chnet-xrf-raw-data-converter"
 url: "https://github.com/androbomb/chnet-xrf-raw-data-converter"

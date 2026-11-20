@@ -268,3 +268,15 @@ convert_file minima, opzioni, lettura h5py), CLI (quick ref + tabella flag +
 exit code). Link nel README. **Verifica**: le celle Python e l'UI
 (terminale, HTTP 200 + `<title>xrf-raw-to-h5</title>`) eseguite in locale su
 un mini raw sintico.
+
+## Audit public-readiness (2026-11-20)
+
+- `CITATION.cff`: aggiunto `date-released: 2026-11-18` (come in dash-xrf-visualizer).
+- `LICENSE`: già MIT — Copyright (c) 2026 Alessandro Bombini (identica a dash-xrf-visualizer).
+- `README.md`: status aggiornato (v0.1.0 pubblicato su PyPI/TestPyPI; CI verde; rimosso "repo privato").
+- Audit secret/path: nessun token, URL ownCloud, `/home/dev` o path personale nei file
+  tracciati né nella storia git; nessun `.env`/chiavi/dati tracciati; workflow senza
+  `secrets.*` (solo OIDC Trusted Publishing).
+- Struttura file allineata a dash-xrf-visualizer (repo pubblica): stessi tipi di docs
+  (AGENTS.md, operational_plan.md, timeline.md, to_do.md, scientific_notes.md, deploy/).
+- Restante: cambio visibilità a pubblica da GitHub (Settings → General → Danger zone).

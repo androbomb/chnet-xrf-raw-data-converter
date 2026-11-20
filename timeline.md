@@ -257,7 +257,7 @@ versione == metadati dist.
 
 ## Guida utente da zero (2026-11-20)
 
-Nuovo file `user_guide_uv_jupyter.md`: guida "molto nabbo" su modello della
+Nuovo file `simple_guide.md`: guida "molto nabbo" su modello della
 guida uv+Jupyter dell'app xrf-visualizer. Struttura: install `uv` (una
 volta), venv `xrfraw-env`, attivazione (incl. fix "script non firmato"
 PowerShell), `uv pip install "chnet-xrf-raw-data-converter[ui]" ipykernel

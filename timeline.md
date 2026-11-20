@@ -254,3 +254,17 @@ tag input `v.0.1.0`→`v0.1.0` (utente) e glob wheel non espanso nel smoke
 index: JSON endpoint con 0.1.0, install `--no-cache` in venv pulito, CLI
 `--version`, conversione reale `(2,2,4096)` uint32 4 eventi, `build_app` ok,
 versione == metadati dist.
+
+## Guida utente da zero (2026-11-20)
+
+Nuovo file `user_guide_uv_jupyter.md`: guida "molto nabbo" su modello della
+guida uv+Jupyter dell'app xrf-visualizer. Struttura: install `uv` (una
+volta), venv `xrfraw-env`, attivazione (incl. fix "script non firmato"
+PowerShell), `uv pip install "chnet-xrf-raw-data-converter[ui]" ipykernel
+jupyterlab`, kernel, poi le 3 modalità d'uso con codice copy-paste: UI
+(cella notebook + UI dal terminale, sezione UX con tabella parametri e
+troubleshooting), notebook Python (5 celle: versione, inspect_raw,
+convert_file minima, opzioni, lettura h5py), CLI (quick ref + tabella flag +
+exit code). Link nel README. **Verifica**: le celle Python e l'UI
+(terminale, HTTP 200 + `<title>xrf-raw-to-h5</title>`) eseguite in locale su
+un mini raw sintico.

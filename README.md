@@ -123,6 +123,7 @@ Vedi `operational_plan.md` §3.
 | `timeline.md` | storico append-only datato |
 | `example.ipynb` | notebook demo: CLI + UI embeddata (Jupyter) |
 | `user_guide.md` | guida operativa: cosa fare, ingressi, parametri, limiti |
+| `user_guide_uv_jupyter.md` | guida utente da zero: install uv, ambiente, UI, notebook Python, CLI (copy-paste) |
 | `deploy/` | ricetta per backend con status verificato / NOT TESTED |
 | `original_code/` | legacy di riferimento (gitignored, sola lettura) |
 | `data_example/` | 2 file di esempio (gitignored, mai caricati in massa) |

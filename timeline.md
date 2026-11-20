@@ -243,3 +243,14 @@ release); `CITATION.cff` aggiunto; README/operational_plan/to_do al nuovo
 nome. Resterà all'utente (web): configurazione Trusted Publishing su
 PyPI/GitHub + dispatch dei workflow — i push e i tag non pubblicano mai
 da soli.
+
+## Release v0.1.0 (2026-11-18)
+
+Pubblicato su **TestPyPI** e **PyPI**: `chnet-xrf-raw-data-converter` 0.1.0
+(wheel 27.3 KB + sdist 121 KB), via workflow `publish-testpypi.yml` /
+`publish.yml` (OIDC Trusted Publishing, dispatch manuale). Fix di percorso:
+tag input `v.0.1.0`→`v0.1.0` (utente) e glob wheel non espanso nel smoke
+(`7f762f8`, tag `v0.1.0` spostato sul fix). Verifica agent su entrambi gli
+index: JSON endpoint con 0.1.0, install `--no-cache` in venv pulito, CLI
+`--version`, conversione reale `(2,2,4096)` uint32 4 eventi, `build_app` ok,
+versione == metadati dist.

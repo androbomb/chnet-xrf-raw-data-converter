@@ -41,7 +41,8 @@ jobs:
       - name: Install the built wheel in a clean env and smoke-test it
         run: |
           uv venv /tmp/xrfraw-smoke
-          uv pip install --python /tmp/xrfraw-smoke/bin/python --quiet "dist/*.whl[ui]"
+          WHEEL="$(ls dist/*.whl)"
+          uv pip install --python /tmp/xrfraw-smoke/bin/python --quiet "${WHEEL}[ui]"
           cd /tmp
           /tmp/xrfraw-smoke/bin/xrf-raw-to-h5 --help >/dev/null
           /tmp/xrfraw-smoke/bin/python - <<'PY'

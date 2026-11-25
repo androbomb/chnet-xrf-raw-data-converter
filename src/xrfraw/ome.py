@@ -3,8 +3,10 @@
 Uno IFD per canale spettrale: i canali XRF sono bande OME ``<Channel>``
 (SamplesPerPixel=1), NON campioni RGB. L'OME-XML nell'IFD 0 porta la griglia
 (PhysicalSizeX/Y) e, sotto una MapAnnotation versionata (``urn:xrfraw:v1``),
-il metadata JSON completo, gli attributi scalari (incluso l'asse energetico
-esplicito, post-rebin) e la maschera (zlib+base64). I piani oltre il primo
+il metadata JSON completo, gli attributi scalari (asse energetico esplicito
+post-rebin, calibrazione originale e post-rebin distinte, fattore R, unità
+keV e convenzione bin-mean) e la maschera (zlib+base64). I piani oltre il
+primo
 NON portano metadati shaped: tifffile deve vedere un'unica serie OME CYX.
 Al read l'energia viene presa dall'asse esplicito se presente, altrimenti
 ri-derivata da m/q (``energy = m*channel + q``).
@@ -143,7 +145,8 @@ def read_ome(path) -> Dataset:
         if energy.size != nc:
             raise ValueError("stored energy axis does not match SizeC")
     if cal:
-        cal_m, cal_q = cal["m"], cal["q"]
+        rb = cal.get("rebinning")  # effective m/q post-rebin (bin-mean)
+        cal_m, cal_q = (rb["m"], rb["q"]) if rb else (cal["m"], cal["q"])
         if energy is None:  # file senza asse esplicito: ri-deriva da m/q
             energy = cal_m * channel.astype(np.float64) + cal_q
         calibrated = True

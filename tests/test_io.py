@@ -31,15 +31,55 @@ def test_h5_round_trip_calibrated_rebinned(tmp_path):
         assert f.attrs["n_events"] == ds.n_events
         assert f.attrs["format"] == "xml"
         assert f.attrs["source_file"] == "a.txt"
-        # rebin size 2 rescales m (1.5 * 2); q unchanged
+        # rebin size 2: m' = 1.5*2, q' = q + (2-1)/2*m = 0.5 (bin-mean)
         assert f.attrs["calibration_m"] == 3.0
-        assert f.attrs["calibration_q"] == -0.25
+        assert f.attrs["calibration_q"] == 0.5
+        # originale distinta, fattore R, unita', convenzione (schema v2)
+        assert f.attrs["calibration_m_original"] == 1.5
+        assert f.attrs["calibration_q_original"] == -0.25
+        assert f.attrs["rebin_factor"] == 2
+        assert f.attrs["energy_unit"] == "keV"
+        assert f.attrs["bin_convention"] == "bin-mean"
+        np.testing.assert_array_equal(f["energy"][()], 3.0 * np.arange(8) + 0.5)
         assert f.attrs["compression"] == 4  # default gzip level
         meta = json.loads(f.attrs["metadata_json"])
-        assert meta["schema_version"] == 1
-        assert meta["calibration"] == {"m": 3.0, "q": -0.25, "provenance": "xml"}
+        assert meta["schema_version"] == 2
+        assert meta["calibration"]["m"] == 1.5 and meta["calibration"]["q"] == -0.25
+        assert meta["calibration"]["rebinning"]["factor"] == 2
         assert meta["transforms"] == [{"type": "rebin", "size": 2, "how": "sum",
                                        "n_channels_from": 16, "n_channels_to": 8}]
+
+
+def test_npz_round_trip_calibrated_rebinned(tmp_path):
+    p = tmp_path / "a.txt"
+    write_format_a(p, GRID32, PIXELS)
+    ds = with_calibration(read_raw(p, n_channels=16), 1.5, -0.25,
+                          provenance="xml")
+    ds = rebin(ds, 2)
+    out = write_dataset(ds, tmp_path / "out.npz", fmt="npz")
+    z = np.load(out)
+    np.testing.assert_array_equal(z["img"], ds.img)
+    np.testing.assert_array_equal(z["energy"], 3.0 * np.arange(8) + 0.5)
+    assert int(z["img"].sum()) == ds.n_events
+    attrs = json.loads(z["attrs"].item())
+    assert (attrs["calibration_m"], attrs["calibration_q"]) == (3.0, 0.5)
+    assert (attrs["calibration_m_original"],
+            attrs["calibration_q_original"]) == (1.5, -0.25)
+    assert attrs["rebin_factor"] == 2 and attrs["energy_unit"] == "keV"
+    z.close()
+
+
+def test_h5_attrs_calibrated_no_rebin(tmp_path):
+    # R = 1: originale e post-rebin coincidono, fattore esplicito = 1
+    p = tmp_path / "a.txt"
+    write_format_a(p, GRID32, PIXELS)
+    ds = with_calibration(read_raw(p, n_channels=16), 1.5, -0.25,
+                          provenance="xml")
+    out = write_dataset(ds, tmp_path / "o.h5")
+    with h5py.File(out, "r") as f:
+        assert f.attrs["rebin_factor"] == 1
+        assert f.attrs["calibration_m"] == f.attrs["calibration_m_original"] == 1.5
+        assert f.attrs["calibration_q"] == f.attrs["calibration_q_original"] == -0.25
 
 
 def test_npz_round_trip_uncalibrated(tmp_path):

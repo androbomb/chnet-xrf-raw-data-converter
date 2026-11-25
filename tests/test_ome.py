@@ -123,14 +123,19 @@ def test_single_ome_series_no_shaped(tmp_path):
 
 
 def test_ome_energy_post_rebin(tmp_path):
-    # la calibrazione energetica registrata e' quella post-rebinning
+    # calibrazione originale e post-rebin distinte (bin-mean), R esplicito
     p = tmp_path / "a.txt"
     write_format_a(p, GRID32, PIXELS)
     ds = with_calibration(read_raw(p, n_channels=16), 1.5, -0.25, provenance="xml")
-    d2 = rebin(ds, size=4, how="sum")  # 16 -> 4 canali, m' = 1.5*4 = 6
+    d2 = rebin(ds, size=4, how="sum")  # 16 -> 4: m' = 6.0, q' = -0.25+1.5*1.5 = 2.0
     out = write_dataset(d2, tmp_path / "r.ome.tif", fmt="ome")
     back = read_ome(out)
     assert back.calibration_m == pytest.approx(6.0)
+    assert back.calibration_q == pytest.approx(2.0)
+    # originale conservata nel metadata, fattore R esplicito
+    cal = back.metadata["calibration"]
+    assert (cal["m"], cal["q"]) == (1.5, -0.25)
+    assert cal["rebinning"]["factor"] == 4
     np.testing.assert_array_equal(back.energy, d2.energy)
     assert int(back.img.sum()) == int(d2.img.sum())
 

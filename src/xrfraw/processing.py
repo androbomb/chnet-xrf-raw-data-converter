@@ -6,9 +6,11 @@ Contract (output_schema.md; scientific_notes.md §9-11):
 - `rebin` is explicit only (never automatic), on the channel axis, uniform
   groups (n_channels % size == 0 or explicit error). `sum` preserves totals
   (uint32 output); `mean` = group sum / width (float64 output, legacy
-  semantics). Declared in metadata `transforms`. If calibrated, m is
-  multiplied by size (q unchanged) so the energy axis and metadata stay
-  consistent.
+  semantics). Declared in metadata `transforms`. If calibrated, the
+  ORIGINAL m/q stay untouched in `calibration`; the post-rebin calibration
+  (m' = size*m, q' = q + (size-1)/2*m — representative energy = group mean,
+  "bin-mean", keV) is stored in `calibration["rebinning"]` and `energy`
+  holds the group means.
 - `rebin_to` maps (h, w, N) -> (h, w, n_new) with n_new in {512, 1024, 2048,
   4096, 8192}, sum-only (totals preserved).
 Both return new Datasets; inputs are never mutated (img is shared, not copied).
@@ -53,8 +55,11 @@ def rebin(ds: Dataset, size: int, how: str = "sum") -> Dataset:
     ``sum`` preserves totals (uint32 output); ``mean`` = group sum / width
     (float64 output, legacy semantics). Requires ``n_channels % size == 0``
     (uniform groups, no silent truncation). Output channel axis = first
-    index of each group; if calibrated, energy follows the same indices and
-    m/q are updated (m *= size, q unchanged). ``n_events`` stays the physical
+    index of each group. If calibrated, the original m/q are preserved
+    untouched in ``metadata["calibration"]``; the post-rebin calibration
+    ``m' = size*m``, ``q' = q + (size-1)/2*m`` (representative energy =
+    group mean, "bin-mean", keV) is stored in ``calibration["rebinning"]``
+    and ``energy`` holds the group means. ``n_events`` stays the physical
     event count. Declared in ``transforms``.
     """
     if not isinstance(size, int) or isinstance(size, bool) or size < 2:
@@ -96,21 +101,29 @@ def rebin(ds: Dataset, size: int, how: str = "sum") -> Dataset:
     meta = dict(ds.metadata)
     meta["n_channels"] = n_out
     meta["dtype"] = str(out.dtype)
+    m0, q0 = ds.calibration_m, ds.calibration_q
     cal_m = cal_q = None
-    if ds.calibration_m is not None:
-        # The new channel i holds the group starting at i*size, so
-        # energy[i] = m*(i*size) + q = (m*size)*i + q.
+    energy = None
+    if m0 is not None and q0 is not None:  # invariant: energy iff calibrated
+        # Representative energy per group = mean of the group energies
+        # ("bin-mean"): E[j] = m*(j*size + (size-1)/2) + q, i.e.
+        # m' = size*m, q' = q + (size-1)/2*m. Original m/q are never
+        # modified; the post-rebin calibration is stored separately.
+        energy = m0 * (starts + (size - 1) / 2) + q0
         cal = dict(meta["calibration"])
-        cal["m"] = float(cal["m"]) * size
+        cal["rebinning"] = {
+            "factor": cal.get("rebinning", {}).get("factor", 1) * size,
+            "uniform": True, "m": m0 * size, "q": q0 + (size - 1) / 2 * m0,
+            "convention": "bin-mean", "energy_unit": "keV",
+        }
         meta["calibration"] = cal
-        cal_m = ds.calibration_m * size
-        cal_q = ds.calibration_q
+        cal_m, cal_q = cal["rebinning"]["m"], cal["rebinning"]["q"]
     meta["transforms"] = list(meta.get("transforms") or []) + [{
         "type": "rebin", "size": size, "how": how,
         "n_channels_from": nc, "n_channels_to": n_out,
     }]
     return replace(ds, img=out, channel=starts.astype(np.uint32),
-                   energy=ds.energy[starts] if ds.energy is not None else None,
+                   energy=energy,
                    calibration_m=cal_m, calibration_q=cal_q,
                    metadata=meta)
 

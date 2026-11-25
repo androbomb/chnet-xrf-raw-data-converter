@@ -140,10 +140,15 @@ def test_rebin_chained_and_calibrated():
     out = rebin(rebin(ds, 2), 2)
     assert out.img.shape[2] == 2
     assert out.calibrated
-    # m is rescaled by the total factor (2 * 2): 0.25 * 4 = 1.0; q unchanged
-    assert out.calibration_m == 1.0 and out.calibration_q == -0.5
-    # energy[i] = (m * total_size) * i + q
-    np.testing.assert_array_equal(out.energy, 1.0 * np.arange(2) - 0.5)
+    # m rescaled by the total factor (2 * 2): 0.25 * 4 = 1.0; q is the
+    # composed bin-mean: -0.5 + (2-1)/2*0.25 + (2-1)/2*0.5 = -0.125
+    assert out.calibration_m == 1.0 and out.calibration_q == -0.125
+    # energy[i] = m' * i + q'
+    np.testing.assert_array_equal(out.energy, 1.0 * np.arange(2) - 0.125)
+    # original calibration untouched, total factor recorded
+    cal = out.metadata["calibration"]
+    assert (cal["m"], cal["q"]) == (0.25, -0.5)
+    assert cal["rebinning"]["factor"] == 4
     assert [t["size"] for t in out.metadata["transforms"]] == [2, 2]
     # input not mutated
     assert ds.calibration_m == 0.25
@@ -180,9 +185,28 @@ def test_rebin_to_updates_calibration():
     ds = with_calibration(_mini_ds(nc=1024, seed=5), 0.5, 1.0, provenance="user")
     out = rebin_to(ds, 512)  # size 2
     assert out.img.shape[2] == 512
-    assert out.calibration_m == 1.0 and out.calibration_q == 1.0
-    np.testing.assert_array_equal(out.energy, 1.0 * np.arange(512) + 1.0)
+    # size 2: m' = 1.0, q' = 1.0 + (2-1)/2*0.5 = 1.25 (bin-mean)
+    assert out.calibration_m == 1.0 and out.calibration_q == 1.25
+    np.testing.assert_array_equal(out.energy, 1.0 * np.arange(512) + 1.25)
     assert int(out.img.sum()) == ds.n_events
+
+
+def test_rebin_calibration_reference_example():
+    # esempio di riferimento: m=0.00373862, q=-0.0340262, R=32 (keV)
+    ds = with_calibration(_mini_ds(nc=64), 0.00373862, -0.0340262,
+                          provenance="user")
+    out = rebin(ds, 32)  # 64 -> 2 canali
+    assert out.calibration_m == pytest.approx(0.11963584)
+    assert out.calibration_q == pytest.approx(0.02392241)
+    cal = out.metadata["calibration"]
+    assert (cal["m"], cal["q"]) == (0.00373862, -0.0340262)  # originale intatta
+    rb = cal["rebinning"]
+    assert rb["factor"] == 32 and rb["uniform"] is True
+    assert rb["convention"] == "bin-mean" and rb["energy_unit"] == "keV"
+    assert rb["m"] == pytest.approx(0.11963584)
+    assert rb["q"] == pytest.approx(0.02392241)
+    np.testing.assert_allclose(out.energy, [0.02392241, 0.14355825])
+    assert int(out.img.sum()) == ds.n_events  # sum conserva i totali
 
 
 def test_rebin_to_validation():

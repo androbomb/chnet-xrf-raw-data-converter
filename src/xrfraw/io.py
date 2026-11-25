@@ -42,8 +42,15 @@ def _attrs(ds: Dataset, compress: int) -> dict:
     attrs["compression"] = compress
     cal = meta.get("calibration")
     if cal:
-        attrs["calibration_m"] = cal["m"]
-        attrs["calibration_q"] = cal["q"]
+        # effective m/q over the stored channels; original kept distinct
+        rb = cal.get("rebinning")
+        attrs["calibration_m"] = rb["m"] if rb else cal["m"]
+        attrs["calibration_q"] = rb["q"] if rb else cal["q"]
+        attrs["calibration_m_original"] = cal["m"]
+        attrs["calibration_q_original"] = cal["q"]
+        attrs["rebin_factor"] = rb["factor"] if rb else 1
+        attrs["energy_unit"] = "keV"
+        attrs["bin_convention"] = "bin-mean"  # representative = group mean
     return attrs
 
 

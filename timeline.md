@@ -318,3 +318,16 @@ un mini raw sintico.
   come `/energy` in H5/NPZ) oltre a `calibration_m/q`; `read_ome` usa
   l'asse esplicito se presente, altrimenti ri-deriva da m/q (compat file
   0.1.1). `output_schema.md` aggiornato.
+- Calibrazione energetica post-rebin distinguibile (2026-11-25, feature
+  request): il rebin non modifica più la calibrazione originale.
+  `metadata["calibration"]` conserva m₀/q₀ intatti; la calibrazione
+  post-rebin va in un blocco `rebinning` = `{factor, uniform, m, q,
+  convention: "bin-mean", energy_unit: "keV"}` con `m' = R·m₀`,
+  `q' = q₀ + (R−1)/2·m₀` (energia rappresentativa = media delle energie dei
+  bin aggregati, keV; per R=1 coincide con l'originale). `energy` è ora la
+  media per gruppo (float64). Schema v2: NPZ/H5/OME espongono gli attributi
+  scalari `calibration_m_original`, `calibration_q_original`, `rebin_factor`,
+  `energy_unit`, `bin_convention` accanto a `calibration_m/q` (effettivi);
+  retrocompatibile (i reader ri-derivano sui file 0.1.1). Aggiunti test
+  round-trip dei 3 formati + esempio di riferimento (m=0.00373862,
+  q=-0.0340262, R=32 → m'=0.11963584, q'=0.02392241).

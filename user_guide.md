@@ -48,7 +48,7 @@ normale converti senza toccare nulla.
 | `n_channels` | **16384** | profondità **esatta** del cubo. Canali oltre = errore esplicito (suggerisce la potenza di 2 successiva). *UNVERIFIED come default strumentale (N1)* |
 | `dtype` | `uint32` | `uint16` (conteggi 16 bit), `float32`/`float64` per consumer che richiedono floating — **`float32` è il target di dash-xrf-visualizer** |
 | `out_path` | vuoto | vuoto → `<temp>/xrfraw_ui/<nome>_<n_channels>.<fmt>` + tasto **Download file** |
-| `fmt` | `h5` | `npz` = stessi campi logici, diverso contenitore |
+| `fmt` | `h5` | `npz` = stessi campi logici, diverso contenitore; `ome` = OME-TIFF/BigTIFF (un IFD per canale, metadati in MapAnnotation `urn:xrfraw:v1`) |
 | `rebin size/how` | off | rebinning spaziale esplicito (2 = somma 2×2) |
 | `rebin_to` | off | profondità target {512…8192}, solo sum — es. `2048` per un cubo leggero |
 | `cal m / cal q` | da XML | calibrazione energia `energy[i]=m·i+q`; se m/q ignoti l'output è *non calibrato* (asse `channel`) e lo dice in chiaro |

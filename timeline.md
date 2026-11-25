@@ -280,3 +280,20 @@ un mini raw sintico.
 - Struttura file allineata a dash-xrf-visualizer (repo pubblica): stessi tipi di docs
   (AGENTS.md, operational_plan.md, timeline.md, to_do.md, scientific_notes.md, deploy/).
 - Restante: cambio visibilità a pubblica da GitHub (Settings → General → Danger zone).
+
+## OME-TIFF / BigTIFF export (2026-11-25)
+
+- `src/xrfraw/ome.py` (nuovo): `write_ome` (un IFD per canale, OME-XML CYX
+  nell'IFD 0, MapAnnotation `urn:xrfraw:v1` con meta/attrs/mask, zlib 0-9,
+  BigTIFF auto >4 GB) + `read_ome` (round-trip → Dataset (Y,X,C) + metadati,
+  energy ri-derivata da m/q). Dip: `tifffile` (core).
+- Integrazione: `write_dataset(fmt="ome")` (atomico, estensione `.ome.tif`),
+  CLI `--format ome`, UI (dropdown fmt, nome default `.ome.tif`),
+  `xrfraw.read_ome` exportato. Comportamenti NPZ/HDF5 invariati.
+- Test: `tests/test_ome.py` (13 fast: round-trip lossless uint16/uint32/
+  float32/float64, calibrato/non calibrato, formato B, OME-XML struttura
+  canali/Dimension/PhysicalSize/MapAnnotation, BigTIFF magic, 256 canali,
+  compressione 0/9 lossless, TIFF senza OME-XML → ValueError, CLI) +
+  `test_ome_round_trip_real` (slow, mappa11: 16384 IFD, cubo identico).
+- Nota: i tag stringa TIFF sono 7-bit ASCII → il non-ASCII dell'OME-XML
+  (es. unità µm) va in numeric character references.

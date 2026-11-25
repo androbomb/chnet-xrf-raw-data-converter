@@ -49,16 +49,17 @@ def _attrs(ds: Dataset, compress: int) -> dict:
 
 def write_dataset(ds: Dataset, path, fmt: str = "h5", compress: int = 4,
                   overwrite: bool = False) -> Path:
-    """Write ``ds`` to ``path`` as .h5 or .npz (atomic, no silent overwrite).
+    """Write ``ds`` to ``path`` as .h5, .npz or .ome.tif (atomic, no silent overwrite).
 
-    compress: gzip level 0..9 for both formats (0 = uncompressed; default 4).
+    compress: level 0..9 (0 = uncompressed; default 4) — gzip for h5/npz,
+    zlib for ome.
     """
     path = Path(path)
     if path.exists() and not overwrite:
         raise FileExistsError(f"output already exists: {path} (use overwrite=True)")
     fmt = fmt.lower()
-    if fmt not in ("h5", "npz"):
-        raise ValueError(f"fmt must be 'h5' or 'npz', got {fmt!r}")
+    if fmt not in ("h5", "npz", "ome"):
+        raise ValueError(f"fmt must be 'h5', 'npz' or 'ome', got {fmt!r}")
     if not isinstance(compress, int) or isinstance(compress, bool) or not 0 <= compress <= 9:
         raise ValueError(f"compress must be an int 0..9 (0 = none), got {compress!r}")
 
@@ -71,6 +72,10 @@ def write_dataset(ds: Dataset, path, fmt: str = "h5", compress: int = 4,
                 for k, v in _arrays(ds).items():
                     f.create_dataset(k, data=v, **kw)
                 f.attrs.update(_attrs(ds, compress))
+            os.replace(tmp, path)
+        elif fmt == "ome":
+            from . import ome  # lazy: ome riusa _attrs da questo modulo
+            ome.write_ome(ds, tmp, compress=compress)
             os.replace(tmp, path)
         else:
             a = _arrays(ds)

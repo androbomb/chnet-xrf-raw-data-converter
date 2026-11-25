@@ -1,4 +1,4 @@
-"""xrf-raw-to-h5 CLI (M3): raw MA-XRF -> NPZ/HDF5.
+"""xrf-raw-to-h5 CLI (M3): raw MA-XRF -> NPZ/HDF5/OME-TIFF.
 
 Core pipeline (output_schema.md): read_raw -> with_calibration (when m/q
 known) -> optional explicit rebin -> write_dataset.
@@ -20,12 +20,12 @@ from .processing import REBIN_TO_TARGETS
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="xrf-raw-to-h5",
-        description="Convert raw MA-XRF files (format A/B) to NPZ/HDF5.")
+        description="Convert raw MA-XRF files (format A/B) to NPZ/HDF5/OME-TIFF.")
     p.add_argument("input", help="raw .txt file, or a directory of raw .txt files")
     p.add_argument("-o", "--out-dir", required=True,
                    help="output directory (created if missing)")
-    p.add_argument("--format", choices=("h5", "npz"), default="h5",
-                   help="output format (default: h5)")
+    p.add_argument("--format", choices=("h5", "npz", "ome"), default="h5",
+                   help="output format: h5, npz, ome (OME-TIFF) (default: h5)")
     p.add_argument("--n-channels", type=int, default=None,
                    help="exact channel depth of the output cube (default: 16384); "
                         "error if the max observed channel exceeds it")
@@ -41,7 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="rebin channel axis to exact depth (512/1024/2048/4096/8192); "
                         "sum-only, totals preserved (default: off)")
     p.add_argument("--compress", type=int, default=4,
-                   help="gzip compression level 0-9 for h5/npz (0 = none; default: 4)")
+                   help="compression level 0-9: gzip per h5/npz, zlib per ome "
+                        "(0 = none; default: 4)")
     p.add_argument("--overwrite", action="store_true",
                    help="replace existing output files")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -49,7 +50,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _convert_one(src: Path, out_dir: Path, args, rebin_spec) -> None:
-    convert_file(src, out_dir / f"{src.stem}.{args.format}",
+    ext = "ome.tif" if args.format == "ome" else args.format
+    convert_file(src, out_dir / f"{src.stem}.{ext}",
                  fmt=args.format, n_channels=args.n_channels, dtype=args.dtype,
                  metadata=args.metadata, rebin_spec=rebin_spec,
                  rebin_to=args.rebin_to, compress=args.compress,

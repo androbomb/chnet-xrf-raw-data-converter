@@ -4,7 +4,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from xrfraw import inspect_raw, read_raw
+from xrfraw import inspect_raw, read_raw, read_ome
+from xrfraw.io import convert_file
 
 BASE = Path(__file__).resolve().parents[1] / "data_example"
 MAPPA11 = BASE / "mappa11.txt"
@@ -66,3 +67,19 @@ def test_read_real_files_totals_mask_and_trailing():
     assert int(ds2.mask.sum()) == 31_174  # 215*145 - 1 unacquired pixel
     assert int(ds2.img[..., 16000:].sum()) == 0  # max observed channel 15999
     assert "known_calibration" not in ds2.metadata
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not MAPPA11.is_file(), reason="data_example/ files not present")
+def test_ome_round_trip_real(tmp_path):
+    # E2E reale: OME-TIFF (16384 IFD) identico al cubo in memoria.
+    # RAM: due cubi ~1.4 GB (write -> read), compress=0 (velocita').
+    ds = convert_file(MAPPA11, tmp_path / "mappa11.ome.tif", fmt="ome", compress=0)
+    back = read_ome(tmp_path / "mappa11.ome.tif")
+    assert back.img.shape == (76, 286, 16384) and back.img.dtype == np.uint32
+    np.testing.assert_array_equal(back.img, ds.img)  # lossless completo
+    np.testing.assert_array_equal(back.mask, ds.mask)
+    assert back.metadata == ds.metadata
+    assert back.n_events == 19_825_090
+    assert back.calibrated and back.calibration_m == 0.00259259
+    np.testing.assert_array_equal(back.energy, back.calibration_m * back.channel + back.calibration_q)

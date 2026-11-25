@@ -1,11 +1,13 @@
-# Output schema — NPZ / HDF5 comuni
+# Output schema — NPZ / HDF5 / OME-TIFF comuni
 
 Status: M3 (2026-11-17) — reader A/B + processing + writer NPZ/HDF5
-(`io.write_dataset`) + CLI implementati e testati (43 fast + 2 slow). Principio:
+(`io.write_dataset`) + CLI implementati e testati (43 fast + 2 slow). OME
+(2026-11-25) — export/lettura OME-TIFF/BigTIFF (`ome.py`) integrato e testato.
+Principio:
 l'output è la rappresentazione **fedele** (lossless) del raw: i conteggi
 non vengono mai modificati dalla calibrazione (element-identical); niente
-auto-rebinning né auto energy-crop. NPZ e HDF5 portano gli stessi campi
-logici.
+auto-rebinning né auto energy-crop. NPZ, HDF5 e OME-TIFF portano gli stessi
+campi logici.
 
 ## Pipeline core
 
@@ -13,7 +15,7 @@ logici.
 raw (A/B) → inspect_raw      → report validazione (nessuna allocazione)
          → read_raw          → Dataset: img (NY,NX,NC) + assi + mask + metadati
          → with_calibration  → + energy[i] = m·i + q   (conteggi intatti)
-         → write_dataset     → .h5 / .npz
+         → write_dataset     → .h5 / .npz / .ome.tif
 ```
 
 Opzionale, esplicito, non di default, **trasformativo** (documentato nei
@@ -96,6 +98,38 @@ profondità del cubo (es. 16384 → 2048) senza perdere eventi.
 
 Array: `img`, `channel`, `energy` (se calibrato), `x_axis`, `y_axis`, `mask`,
 più `attrs` (stringa JSON con gli stessi campi scalari dell'HDF5).
+
+## OME-TIFF / OME-BigTIFF (`<nome>.ome.tif`)
+
+Contenitore multidimensionale scientifico via `tifffile`: il datacube è
+(C, Y, X) con **un IFD per canale spettrale** (`DimensionOrder="CYX"`,
+`DimensionType="C"`). I canali XRF sono bande OME `<Channel>` con
+`SamplesPerPixel="1"` — mai interpretati come campioni RGB.
+
+- Lossless: dtype preservato (uint16/uint32/float32/float64 → OME Type
+  uint16/uint32/float/double), valori identici al round-trip (testati).
+  Compressione lossless zlib (`compress` 0-9, default 4; 0 = nessuna).
+- BigTIFF: `write_ome` passa a BigTIFF se i dati superano 4 GB (limite
+  classic TIFF); esplicito con `bigtiff=True/False`.
+- OME-XML (ImageDescription dell'IFD 0, namespace 2016-06):
+  - `Pixels.PhysicalSizeX/Y` = passo di griglia, unità = metadata.units
+    (campi spaziali OME standard).
+  - `MapAnnotation` con chiave namespaced e versionata `urn:xrfraw:v1`:
+    - `meta` = `metadata_json` completo (griglia, unità, calibrazione,
+      campi raw, anomalie, transforms, provenienza);
+    - `attrs` = attributi scalari (source_file, n_events, software,
+      created_utc, compression);
+    - `mask` = byte bool compressi zlib+base64.
+  - Il non-ASCII dell'XML va in numeric character references (i tag stringa
+    TIFF sono 7-bit ASCII).
+- Lettura: `xrfraw.read_ome(path)` ricostruisce `img` in (Y, X, C) e tutti
+  i metadati; se calibrato, `energy` è ri-derivata da m/q
+  (`energy = m·channel + q`).
+- Interoperabilità: lettura verificata con `tifffile`; qualsiasi reader OME
+  vede un'immagine C-stack valida. **La calibrazione custom vive nella
+  MapAnnotation `urn:xrfraw:v1` e non è automaticamente comprensibile a
+  software XRF generici**: l'interoperabilità della calibrazione con
+  Bio-Formats non è verificata e non va dichiarata senza test.
 
 ## Convenzioni
 

@@ -249,7 +249,7 @@ strumentali, per un file normale non tocchi nulla):
 | Campo | Default | Cosa fa, in parole povere |
 | :--- | :--- | :--- |
 | `out_path` | vuoto | dove salvare l'output. **Vuoto = va in una cartella temporanea** e il tasto *Download file* sotto lo scarica col click. |
-| `fmt` | `h5` | formato di output: `h5` (HDF5) o `npz` (NumPy). Stessi contenuti, contenitore diverso. |
+| `fmt` | `h5` | formato di output: `h5` (HDF5), `npz` (NumPy) o `ome` (OME-TIFF/BigTIFF, un piano per canale). Stessi contenuti, contenitore diverso. |
 | `n_channels` | `16384` | profondità **esatta** del cubo (numero di canali energia). Se il file ha canali oltre, errore esplicito: ti dice la potenza di 2 successiva. |
 | `dtype` | `uint32` | tipo dei conteggi: `uint32`, `uint16`, `float32`, `float64`. Per il visualizer xrf usa `float32`. |
 | `rebin size` / `rebin how` | off | rebinning spaziale esplicito (es. 2 = raggruppa 2×2 pixel, `sum` o `mean`). |
@@ -402,7 +402,7 @@ xrf-raw-to-h5 mappa11.txt -o out/ --format npz --compress 0 --overwrite
 | :--- | :--- | :--- |
 | `input` (posizionale) | — | un `.txt`, o una cartella di `.txt` |
 | `-o`, `--out-dir` | **obbligatorio** | cartella output (creata se manca) |
-| `--format` | `h5` | `h5` o `npz` |
+| `--format` | `h5` | `h5`, `npz` o `ome` (OME-TIFF, estensione `.ome.tif`) |
 | `--n-channels` | 16384 | profondità esatta del cubo; canale oltre = errore |
 | `--dtype` | `uint32` | `uint16`, `float32`, `float64` |
 | `--metadata` | off | JSON esterno (formato B senza griglia) |

@@ -13,7 +13,8 @@ except PackageNotFoundError:  # checkout di sorgente non installato
 
 from .dataset import Dataset
 from .data import inspect_raw, read_raw
+from .ome import read_ome
 from .processing import rebin, rebin_to, with_calibration
 
-__all__ = ["Dataset", "__version__", "inspect_raw", "read_raw", "rebin",
-           "rebin_to", "with_calibration"]
+__all__ = ["Dataset", "__version__", "inspect_raw", "read_raw", "read_ome",
+           "rebin", "rebin_to", "with_calibration"]

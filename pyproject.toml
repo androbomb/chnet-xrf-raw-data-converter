@@ -1,13 +1,13 @@
 [project]
 name = "chnet-xrf-raw-data-converter"
 version = "0.1.0"
-description = "raw MA-XRF (Fi MA-XRF, INFN-CHNet) to NPZ/HDF5 converter: faithful event cube (y, x, channel), energy calibration as attachment, acquisition mask"
+description = "raw MA-XRF (Fi MA-XRF, INFN-CHNet) to NPZ/HDF5/OME-TIFF converter: faithful event cube (y, x, channel), energy calibration as attachment, acquisition mask"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Alessandro Bombini" }]
-keywords = ["xrf", "x-ray-fluorescence", "maxrf", "hdf5", "spectroscopy"]
+keywords = ["xrf", "x-ray-fluorescence", "maxrf", "hdf5", "ome-tiff", "spectroscopy"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -21,6 +21,7 @@ classifiers = [
 dependencies = [
     "numpy",
     "h5py",
+    "tifffile",
     "tqdm",
 ]
 

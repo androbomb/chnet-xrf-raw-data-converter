@@ -1,8 +1,8 @@
 # chnet-xrf-raw-data-converter (import: `xrfraw`)
 
-Convertitore raw MA-XRF (Fi MA-XRF, INFN-CHNet) → NPZ/HDF5 comuni: datacube
-di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC, assi
-spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
+Convertitore raw MA-XRF (Fi MA-XRF, INFN-CHNet) → NPZ/HDF5/OME-TIFF comuni:
+datacube di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC,
+assi spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
 energia come **allegato** (`energy[i] = m·i + q`, conteggi element-identical).
 
 **Status: M6 (2026-11-17) — converter + UI completi; v0.1.0 pubblicato su
@@ -24,7 +24,8 @@ workflow Trusted Publishing in `.github/workflows/`, vedi
 - Nessun auto-rebinning / auto energy-crop (contratto kickstart); rebin
   esplicito (sum/mean) e rebin a profondità target (`rebin_to`) solo su
   richiesta.
-- Scrive `.h5` o `.npz` con lo stesso schema logico — `output_schema.md`.
+- Scrive `.h5`, `.npz` o `.ome.tif` (OME-TIFF/BigTIFF) con lo stesso schema
+  logico — `output_schema.md`.
 - UI minimale Dash (DARKLY, accent #4196B4, embeddabile in Jupyter):
   `from xrfraw.ui import build_app` (sezione UI).
 
@@ -50,7 +51,7 @@ CLI (exit code 0 ok / 1 errori di conversione / 2 usage; nessuna overwrite
 silenziosa — `--overwrite` per sostituire):
 
 ```bash
-xrf-raw-to-h5 FILE_OR_DIR -o OUT_DIR --format h5|npz \
+xrf-raw-to-h5 FILE_OR_DIR -o OUT_DIR --format h5|npz|ome \
     [--n-channels N] [--dtype uint32|uint16|float32|float64] [--metadata meta.json] \
     [--rebin N sum|mean] [--rebin-to 512|1024|2048|4096|8192] \
     [--compress 0-9] [--overwrite]
@@ -71,7 +72,8 @@ ds = read_raw("mappa11.txt")                   # (NY, NX, NC) + assi + mask + me
 ds = with_calibration(ds, 0.00259259, -0.0355556, provenance="xml")  # conteggi intatti
 ds = rebin(ds, 2)                              # opzionale, esplicito (sum|mean)
 ds = rebin_to(ds, 2048)                        # opzionale: profondità target
-write_dataset(ds, "mappa11.h5", fmt="h5", compress=4)  # o fmt="npz"; compress 0-9
+write_dataset(ds, "mappa11.h5", fmt="h5", compress=4)  # o fmt="npz"/"ome"; compress 0-9
+read_ome("mappa11.ome.tif")   # round-trip: OME-TIFF -> Dataset (Y, X, C) + metadati
 ```
 
 UI minimale (Dash, DARKLY, accent #4196B4) — la CLI grafica per
@@ -89,7 +91,7 @@ app.run(jupyter_mode="inline", jupyter_height=800)  # notebook (vedi example.ipy
 Carica il raw (upload, load from link o path_to_file), espone ogni
 parametro di `convert_file` come input (out_path, fmt, n_channels, dtype,
 metadata, rebin_spec, rebin_to, cal m/q, compress, overwrite), **Convert**
-e **Download file** per l'output `.h5`/`.npz`. Tooltip su ogni campo;
+e **Download file** per l'output `.h5`/`.npz`/`.ome.tif`. Tooltip su ogni campo;
 spinner (`dcc.Loading`) durante i callback; al click su Convert: status
 immediato "conversione in corso" + tasto disabilitato fino al termine
 (anti doppio-click: un solo Convert alla volta). Upload limitato a
@@ -116,7 +118,7 @@ Vedi `operational_plan.md` §3.
 | `operational_plan.md` | decisioni, milestone, criteri di accettazione, domande aperte |
 | `legacy_audit.md` | problemi legacy verificati + differenze intenzionali |
 | `data_format.md` | grammatica degli input (formati A/B, stream eventi, NC) |
-| `output_schema.md` | schema comune NPZ/HDF5 |
+| `output_schema.md` | schema comune NPZ/HDF5/OME-TIFF |
 | `scientific_notes.md` | calibrazione, conteggi, assi, precisione |
 | `to_do.md` | Now/Next/Later/Blocked + verification log |
 | `timeline.md` | storico append-only datato |

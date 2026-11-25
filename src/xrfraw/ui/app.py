@@ -61,7 +61,8 @@ def run_convert(path, out_path, fmt, nc, dtype, meta, rebin_spec, rebin_to,
     out_path vuoto -> _WORKDIR/<stem>_<nc>.<fmt>. Returns (path, summary).
     """
     t0 = time.monotonic()
-    out = Path(out_path) if out_path else _WORKDIR / f"{Path(path).stem}_{nc}.{fmt}"
+    ext = "ome.tif" if fmt == "ome" else fmt
+    out = Path(out_path) if out_path else _WORKDIR / f"{Path(path).stem}_{nc}.{ext}"
     out.parent.mkdir(parents=True, exist_ok=True)  # write_dataset fa rename atomico
     ds = convert_file(path, out, fmt=fmt, n_channels=int(nc or 16384), dtype=dtype,
                       metadata=meta, rebin_spec=rebin_spec, rebin_to=rebin_to,
@@ -108,7 +109,7 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
             ]),
         ]),
         dbc.Navbar(
-            [dbc.NavbarBrand("convert_file: raw (.txt, formato A/B) → .h5 / .npz")],
+            [dbc.NavbarBrand("convert_file: raw (.txt, formato A/B) → .h5 / .npz / .ome.tif")],
             color=ACCENT,
         ),
         html.Br(),
@@ -149,7 +150,7 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
             dbc.Col(_field("fmt",
                            dcc.Dropdown(id="in-fmt", value="h5", className="xrfraw-dd",
                                         options=[{"label": v, "value": v}
-                                                 for v in ("h5", "npz")])), md=4),
+                                                 for v in ("h5", "npz", "ome")])), md=4),
             dbc.Col(_field("n_channels (profondità ESATTA)",
                            dcc.Input(id="in-nc", type="number", value=16384, min=1)), md=4),
             dbc.Col(_field("dtype cubo",
@@ -205,7 +206,7 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                     "il percorso, non l'upload.", target="in-path", placement="top"),
         dbc.Tooltip("Dove scrivere l'output. Se vuoto: <temp>/xrfraw_ui/<nome_file>_<n_channels>.<fmt> "
                     "(poi Download file).", target="in-out", placement="top"),
-        dbc.Tooltip("Formato output: h5 (HDF5) o npz.", target="in-fmt", placement="top"),
+        dbc.Tooltip("Formato output: h5 (HDF5), npz, ome (OME-TIFF).", target="in-fmt", placement="top"),
         dbc.Tooltip("Profondità ESATTA di lettura: l'output è (y, x, n_channels). "
                     "Default strumentale 16384; errore se un canale la supera.",
                     target="in-nc", placement="top"),

@@ -305,3 +305,16 @@ un mini raw sintico.
   `DimensionOrder="XYZCT"`, booleani lowercase, `StructuredAnnotations`
   sotto `OME` + `Image.AnnotationRef`. Ora **XSD-VALID**; i file sul share
   ownCloud rigenerati e riscaricati.
+- Fix single-OME-series (2026-11-25, da audit interoperabilità): `tifffile`
+  vedeva **512 serie shaped YX** invece di un'unica serie OME CYX —
+  `TiffWriter` di default (`kind=shaped`) allega un JSON
+  `{"shape": [Y, X]}` a ogni piano 2D, che `TiffFile` interpreta come
+  metadati shaped per-IFD. Fix: `TiffWriter(..., shaped=False)` (l'arg `kind`
+  è troppo recente per il range di tifffile supportato). Aggiunti test:
+  `tif.is_ome`, `not tif.is_shaped`, `len(tif.series) == 1`,
+  `series[0].axes == "CYX"`, counts/annotazioni conservati.
+- Calibrazione energetica post-rebin registrata esplicitamente: `attrs`
+  nell'OME-XML ora include `energy` (asse float64 per-canale, post-rebin,
+  come `/energy` in H5/NPZ) oltre a `calibration_m/q`; `read_ome` usa
+  l'asse esplicito se presente, altrimenti ri-deriva da m/q (compat file
+  0.1.1). `output_schema.md` aggiornato.

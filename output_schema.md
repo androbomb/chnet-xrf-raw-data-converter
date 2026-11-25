@@ -105,6 +105,9 @@ Contenitore multidimensionale scientifico via `tifffile`: il datacube è
 (C, Y, X) con **un IFD per canale spettrale** (`SizeC` = canali,
 `DimensionOrder="XYZCT"`, `SizeZ=SizeT=1`). I canali XRF sono bande OME
 `<Channel>` con `SamplesPerPixel="1"` — mai interpretati come campioni RGB.
+I piani oltre l'IFD 0 NON portano metadati shaped (`shaped=False`):
+`tifffile` deve vedere **un'unica serie OME CYX** (`tif.is_ome` e non
+`tif.is_shaped`, `len(tif.series) == 1`, `axes == "CYX"` — testato).
 L'OME-XML è **validato contro lo XSD ufficiale OME 2016-06** (conforme).
 
 - Lossless: dtype preservato (uint16/uint32/float32/float64 → OME Type
@@ -122,13 +125,16 @@ L'OME-XML è **validato contro lo XSD ufficiale OME 2016-06** (conforme).
     - `meta` = `metadata_json` completo (griglia, unità, calibrazione,
       campi raw, anomalie, transforms, provenienza);
     - `attrs` = attributi scalari (source_file, n_events, software,
-      created_utc, compression);
+      created_utc, compression) + `calibration_m`/`calibration_q` (se
+      calibrato) + `energy`: asse energetico esplicito per canale
+      (float64, post-rebin, identico a `/energy` di H5/NPZ) se calibrato;
     - `mask` = byte bool compressi zlib+base64.
   - Il non-ASCII dell'XML va in numeric character references (i tag stringa
     TIFF sono 7-bit ASCII).
 - Lettura: `xrfraw.read_ome(path)` ricostruisce `img` in (Y, X, C) e tutti
-  i metadati; se calibrato, `energy` è ri-derivata da m/q
-  (`energy = m·channel + q`).
+  i metadati; `energy` viene presa dall'asse esplicito in `attrs` se
+  presente, altrimenti ri-derivata da m/q (`energy = m·channel + q`,
+  file scritti prima dell'asse esplicito).
 - Interoperabilità: lettura verificata con `tifffile`; qualsiasi reader OME
   vede un'immagine C-stack valida. **La calibrazione custom vive nella
   MapAnnotation `urn:xrfraw:v1` e non è automaticamente comprensibile a

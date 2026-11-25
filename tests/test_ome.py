@@ -10,7 +10,7 @@ import pytest
 import tifffile
 
 from _synthetic import GRID32, N_EVENTS, PIXELS, write_format_a, write_format_b
-from xrfraw import read_raw, read_ome, with_calibration
+from xrfraw import read_raw, read_ome, rebin, with_calibration
 from xrfraw.io import write_dataset
 from xrfraw.ome import write_ome
 
@@ -101,6 +101,38 @@ def test_omexml_structure(tmp_path):
     assert {m.get("K") for m in ms} == {"meta", "attrs", "mask"}
     meta_txt = next((m.text or "") for m in ms if m.get("K") == "meta")
     assert json.loads(meta_txt)["n_events"] == N_EVENTS
+
+
+def test_single_ome_series_no_shaped(tmp_path):
+    # audit: un'unica serie OME CYX, NON N serie shaped YX per piano
+    ds = _dataset(tmp_path, calibrated=True)
+    out = write_dataset(ds, tmp_path / "c.ome.tif", fmt="ome")
+    ny, nx, nc = ds.img.shape
+    with tifffile.TiffFile(str(out)) as tf:
+        assert tf.is_ome
+        assert not tf.is_shaped
+        assert len(tf.series) == 1
+        assert tf.series[0].axes == "CYX"
+        assert tf.series[0].shape == (nc, ny, nx)
+    back = read_ome(out)
+    assert int(back.img.sum()) == int(ds.img.sum())  # counts conservati
+    assert back.n_events == ds.n_events
+    assert back.metadata == ds.metadata  # annotazioni conservate
+    np.testing.assert_array_equal(back.mask, ds.mask)
+    np.testing.assert_array_equal(back.energy, ds.energy)
+
+
+def test_ome_energy_post_rebin(tmp_path):
+    # la calibrazione energetica registrata e' quella post-rebinning
+    p = tmp_path / "a.txt"
+    write_format_a(p, GRID32, PIXELS)
+    ds = with_calibration(read_raw(p, n_channels=16), 1.5, -0.25, provenance="xml")
+    d2 = rebin(ds, size=4, how="sum")  # 16 -> 4 canali, m' = 1.5*4 = 6
+    out = write_dataset(d2, tmp_path / "r.ome.tif", fmt="ome")
+    back = read_ome(out)
+    assert back.calibration_m == pytest.approx(6.0)
+    np.testing.assert_array_equal(back.energy, d2.energy)
+    assert int(back.img.sum()) == int(d2.img.sum())
 
 
 def test_bigtiff(tmp_path):

@@ -3,8 +3,11 @@
 Uno IFD per canale spettrale: i canali XRF sono bande OME ``<Channel>``
 (SamplesPerPixel=1), NON campioni RGB. L'OME-XML nell'IFD 0 porta la griglia
 (PhysicalSizeX/Y) e, sotto una MapAnnotation versionata (``urn:xrfraw:v1``),
-il metadata JSON completo, gli attributi scalari e la maschera (zlib+base64).
-Al read la calibrazione viene ri-derivata da m/q (``energy = m*channel + q``).
+il metadata JSON completo, gli attributi scalari (incluso l'asse energetico
+esplicito, post-rebin) e la maschera (zlib+base64). I piani oltre il primo
+NON portano metadati shaped: tifffile deve vedere un'unica serie OME CYX.
+Al read l'energia viene presa dall'asse esplicito se presente, altrimenti
+ri-derivata da m/q (``energy = m*channel + q``).
 """
 from __future__ import annotations
 
@@ -41,6 +44,8 @@ def _ome_xml(ds: Dataset, compress: int) -> str:
     meta = ds.metadata
     grid = meta["grid"]
     attrs = _attrs(ds, compress)
+    if ds.energy is not None:  # asse esplicito (post-rebin) come in H5/NPZ
+        attrs = {**attrs, "energy": ds.energy.tolist()}
     tds = "".join(f'<TiffData FirstC="{c}" FirstT="0" IFD="{c}" PlaneCount="1"/>'
                   for c in range(nc))
     chans = "".join(f'<Channel ID="Channel:0:{c}" SamplesPerPixel="1"><LightPath/></Channel>'
@@ -84,7 +89,9 @@ def write_ome(ds: Dataset, path, compress: int = 4, bigtiff: bool | None = None)
     compression = None if compress == 0 else "zlib"
     args = None if compress == 0 else {"level": compress}
     ny, nx, nc = ds.img.shape
-    with tifffile.TiffWriter(str(path), bigtiff=bigtiff) as tw:
+    # shaped=False: senza JSON "shaped" per piano, altrimenti tifffile vede
+    # N serie YX distinte invece di un'unica serie OME CYX.
+    with tifffile.TiffWriter(str(path), bigtiff=bigtiff, shaped=False) as tw:
         for c in range(nc):
             tw.write(ds.img[:, :, c], description=xml if c == 0 else None,
                      compression=compression, compressionargs=args)
@@ -127,12 +134,18 @@ def read_ome(path) -> Dataset:
     channel = np.arange(nc, dtype=np.uint32)
     x_axis = (grid["x_min"] + np.arange(nx) * grid["x_step"]).astype(np.float64)
     y_axis = (grid["y_min"] + np.arange(ny) * grid["y_step"]).astype(np.float64)
-    energy = cal_m = cal_q = None
-    calibrated = False
     cal = meta.get("calibration")
+    cal_m = cal_q = None
+    energy = None
+    calibrated = False
+    if "energy" in attrs:  # asse esplicito (writer con calibrazione, post-rebin)
+        energy = np.asarray(attrs["energy"], dtype=np.float64)
+        if energy.size != nc:
+            raise ValueError("stored energy axis does not match SizeC")
     if cal:
         cal_m, cal_q = cal["m"], cal["q"]
-        energy = cal_m * channel.astype(np.float64) + cal_q
+        if energy is None:  # file senza asse esplicito: ri-deriva da m/q
+            energy = cal_m * channel.astype(np.float64) + cal_q
         calibrated = True
     return Dataset(img=img, channel=channel, x_axis=x_axis, y_axis=y_axis,
                    mask=mask, metadata=meta, source_file=attrs["source_file"],

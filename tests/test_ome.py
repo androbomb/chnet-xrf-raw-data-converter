@@ -86,19 +86,21 @@ def test_omexml_structure(tmp_path):
     px = root.find(f"{{{_OME}}}Image/{{{_OME}}}Pixels")
     assert px is not None
     assert px.get("Type") == "uint32"
-    assert px.get("SamplesPerPixel") == "1"
-    dim = px.find(f"{{{_OME}}}Dimension")
-    assert dim is not None
-    assert (dim.get("C"), dim.get("H"), dim.get("W")) == (str(nc), str(ny), str(nx))
+    assert px.get("DimensionOrder") == "XYZCT"  # 2016-06: enum valido, no DimensionType
+    assert (px.get("SizeC"), px.get("SizeY"), px.get("SizeX")) == (str(nc), str(ny), str(nx))
     assert float(px.get("PhysicalSizeX")) == float(GRID32[2])  # x_step
     assert px.get("PhysicalSizeXUnit") == ds.metadata["units"]["x"]
     chans = px.findall(f"{{{_OME}}}Channel")
     assert len(chans) == nc and all(c.get("SamplesPerPixel") == "1" for c in chans)
-    sa = root.find(f"{{{_OME}}}Image/{{{_OME}}}StructuredAnnotations/{{{_OME}}}MapAnnotation")
-    assert sa is not None and sa.get("Key") == _ANN
-    maps = {m.get("Key"): m for m in sa.findall(f"{{{_OME}}}MapAnnotation.Map")}
-    assert set(maps) == {"meta", "attrs", "mask"}
-    assert json.loads(maps["meta"].text or "")["n_events"] == N_EVENTS
+    sa = next((a for a in root.iter(f"{{{_OME}}}MapAnnotation")
+               if a.get("Namespace") == _ANN), None)
+    assert sa is not None and sa.get("ID") == "Annotation:0"
+    val = sa.find(f"{{{_OME}}}Value")
+    assert val is not None
+    ms = val.findall(f"{{{_OME}}}M")
+    assert {m.get("K") for m in ms} == {"meta", "attrs", "mask"}
+    meta_txt = next((m.text or "") for m in ms if m.get("K") == "meta")
+    assert json.loads(meta_txt)["n_events"] == N_EVENTS
 
 
 def test_bigtiff(tmp_path):

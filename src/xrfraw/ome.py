@@ -46,23 +46,30 @@ def _ome_xml(ds: Dataset, compress: int) -> str:
     chans = "".join(f'<Channel ID="Channel:0:{c}" SamplesPerPixel="1"><LightPath/></Channel>'
                     for c in range(nc))
     mask_b64 = base64.b64encode(zlib.compress(ds.mask.tobytes(), 9)).decode()
+    ann = (
+        f'<StructuredAnnotations>'
+        f'<MapAnnotation ID="Annotation:0" Namespace={quoteattr(_ANN_KEY)}>'
+        f'<Value>'
+        f'<M K="meta">{escape(json.dumps(meta, ensure_ascii=False))}</M>'
+        f'<M K="attrs">{escape(json.dumps(attrs, ensure_ascii=False))}</M>'
+        f'<M K="mask">{mask_b64}</M>'
+        f'</Value></MapAnnotation></StructuredAnnotations>'
+    )
+    # OME-XML 2016-06 conforme allo XSD ufficiale: Size* su Pixels, booleani
+    # lowercase, DimensionOrder XYZCT, Channel prima di TiffData, annotation
+    # sotto OME (ID "Annotation:N", Namespace) + Image.AnnotationRef.
     xml = (
-        f'<OME xmlns="{_OME_NS}" UniqueID={quoteattr("xrfraw-" + meta["source_file"])} '
-        f'Creator={quoteattr(_software())}>'
+        f'<OME xmlns="{_OME_NS}" Creator={quoteattr(_software())}>'
         f'<Image ID="Image:0" Name={quoteattr(meta["source_file"])}>'
-        f'<Pixels ID="Pixels:0" BigEndian="False" DimensionOrder="CYX" DimensionType="C" '
-        f'Type={quoteattr(_TYPE[meta["dtype"]])} Interleaved="False" SamplesPerPixel="1" '
+        f'<Pixels ID="Pixels:0" BigEndian="false" DimensionOrder="XYZCT" '
+        f'Type={quoteattr(_TYPE[meta["dtype"]])} Interleaved="false" '
+        f'SizeX="{nx}" SizeY="{ny}" SizeZ="1" SizeC="{nc}" SizeT="1" '
         f'PhysicalSizeX={quoteattr(str(grid["x_step"]))} '
         f'PhysicalSizeXUnit={quoteattr(meta["units"]["x"])} '
         f'PhysicalSizeY={quoteattr(str(grid["y_step"]))} '
         f'PhysicalSizeYUnit={quoteattr(meta["units"]["y"])}>'
-        f'<Dimension C="{nc}" H="{ny}" W="{nx}"/>{tds}{chans}</Pixels>'
-        f'<StructuredAnnotations>'
-        f'<MapAnnotation ID="MapAnnotation:0" Key={quoteattr(_ANN_KEY)}>'
-        f'<MapAnnotation.Map Key="meta">{escape(json.dumps(meta, ensure_ascii=False))}</MapAnnotation.Map>'
-        f'<MapAnnotation.Map Key="attrs">{escape(json.dumps(attrs, ensure_ascii=False))}</MapAnnotation.Map>'
-        f'<MapAnnotation.Map Key="mask">{mask_b64}</MapAnnotation.Map>'
-        f'</MapAnnotation></StructuredAnnotations></Image></OME>'
+        f'{chans}{tds}</Pixels><AnnotationRef ID="Annotation:0"/>'
+        f'</Image>{ann}</OME>'
     )
     # TIFF Description requires 7-bit ASCII: non-ASCII (es. unità µm) -> charref
     return xml.encode("ascii", "xmlcharrefreplace").decode("ascii")
@@ -94,20 +101,23 @@ def read_ome(path) -> Dataset:
         planes = [tf.pages[i].asarray() for i in range(len(tf.pages))]
     root = ET.fromstring(xml)
     px = root.find(f"{{{_OME_NS}}}Image/{{{_OME_NS}}}Pixels")
-    dim = px.find(f"{{{_OME_NS}}}Dimension") if px is not None else None
-    if px is None or dim is None:
-        raise ValueError("malformed OME-XML (missing Pixels/Dimension)")
+    if px is None:
+        raise ValueError("malformed OME-XML (missing Pixels)")
     dtype = _TIFF_TYPE.get(px.get("Type") or "")
     if dtype is None:
         raise ValueError(f"unsupported OME Type {px.get('Type')!r}")
-    nc, ny, nx = int(dim.get("C")), int(dim.get("H")), int(dim.get("W"))
+    if any(px.get(k) is None for k in ("SizeC", "SizeY", "SizeX")):
+        raise ValueError("malformed OME-XML (missing Size* attributes)")
+    nc, ny, nx = (int(px.get(k)) for k in ("SizeC", "SizeY", "SizeX"))
     if len(planes) != nc or planes[0].shape != (ny, nx) or planes[0].dtype != dtype:
         raise ValueError("OME-XML dimensions do not match the stored planes")
-    sa = root.find(f"{{{_OME_NS}}}Image/{{{_OME_NS}}}StructuredAnnotations/"
-                   f"{{{_OME_NS}}}MapAnnotation")
-    if sa is None or sa.get("Key") != _ANN_KEY:
+    sa = next((a for a in root.iter(f"{{{_OME_NS}}}MapAnnotation")
+               if a.get("Namespace") == _ANN_KEY or a.get("Key") == _ANN_KEY), None)
+    if sa is None:
         raise ValueError(f"missing {_ANN_KEY} MapAnnotation (file non xrfraw?)")
-    entries = {m.get("Key"): m.text or "" for m in sa.findall(f"{{{_OME_NS}}}MapAnnotation.Map")}
+    entries = {m.get("K"): m.text or "" for m in sa.findall(f"{{{_OME_NS}}}Value/{{{_OME_NS}}}M")}
+    if not entries:  # tolleranza: OME 2008-02 (MapAnnotation.Map)
+        entries = {m.get("Key"): m.text or "" for m in sa.findall(f"{{{_OME_NS}}}MapAnnotation.Map")}
     meta = json.loads(entries["meta"])
     attrs = json.loads(entries["attrs"])
     mask = np.frombuffer(zlib.decompress(base64.b64decode(entries["mask"])),

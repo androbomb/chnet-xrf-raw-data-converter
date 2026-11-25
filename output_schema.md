@@ -102,19 +102,23 @@ più `attrs` (stringa JSON con gli stessi campi scalari dell'HDF5).
 ## OME-TIFF / OME-BigTIFF (`<nome>.ome.tif`)
 
 Contenitore multidimensionale scientifico via `tifffile`: il datacube è
-(C, Y, X) con **un IFD per canale spettrale** (`DimensionOrder="CYX"`,
-`DimensionType="C"`). I canali XRF sono bande OME `<Channel>` con
-`SamplesPerPixel="1"` — mai interpretati come campioni RGB.
+(C, Y, X) con **un IFD per canale spettrale** (`SizeC` = canali,
+`DimensionOrder="XYZCT"`, `SizeZ=SizeT=1`). I canali XRF sono bande OME
+`<Channel>` con `SamplesPerPixel="1"` — mai interpretati come campioni RGB.
+L'OME-XML è **validato contro lo XSD ufficiale OME 2016-06** (conforme).
 
 - Lossless: dtype preservato (uint16/uint32/float32/float64 → OME Type
   uint16/uint32/float/double), valori identici al round-trip (testati).
   Compressione lossless zlib (`compress` 0-9, default 4; 0 = nessuna).
 - BigTIFF: `write_ome` passa a BigTIFF se i dati superano 4 GB (limite
   classic TIFF); esplicito con `bigtiff=True/False`.
-- OME-XML (ImageDescription dell'IFD 0, namespace 2016-06):
-  - `Pixels.PhysicalSizeX/Y` = passo di griglia, unità = metadata.units
-    (campi spaziali OME standard).
-  - `MapAnnotation` con chiave namespaced e versionata `urn:xrfraw:v1`:
+- OME-XML (ImageDescription dell'IFD 0, namespace 2016-06, conforme allo
+  XSD ufficiale — validato):
+  - `Pixels` con `SizeX/SizeY/SizeC` + `PhysicalSizeX/Y` = passo di griglia,
+    unità = metadata.units (campi spaziali OME standard).
+  - `MapAnnotation` (sotto `OME.StructuredAnnotations`, collegata con
+    `Image.AnnotationRef`; `ID="Annotation:0"`, `Namespace="urn:xrfraw:v1"`)
+    con coppie chiave/valore `<M K="...">`:
     - `meta` = `metadata_json` completo (griglia, unità, calibrazione,
       campi raw, anomalie, transforms, provenienza);
     - `attrs` = attributi scalari (source_file, n_events, software,

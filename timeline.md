@@ -297,3 +297,11 @@ un mini raw sintico.
   `test_ome_round_trip_real` (slow, mappa11: 16384 IFD, cubo identico).
 - Nota: i tag stringa TIFF sono 7-bit ASCII → il non-ASCII dell'OME-XML
   (es. unità µm) va in numeric character references.
+- Fix conformità (stesso giorno): validazione contro l'XSD ufficiale OME
+  2016-06 ha rivelato 13 violazioni (XML scritto a convenzioni 2008-02:
+  elemento `<Dimension>`, `DimensionOrder="CYX"`, `DimensionType`,
+  `SamplesPerPixel` su Pixels, booleani "False", `StructuredAnnotations`
+  sotto Pixels). Corretti: attributi `SizeX/SizeY/SizeC/SizeZ/SizeT`,
+  `DimensionOrder="XYZCT"`, booleani lowercase, `StructuredAnnotations`
+  sotto `OME` + `Image.AnnotationRef`. Ora **XSD-VALID**; i file sul share
+  ownCloud rigenerati e riscaricati.

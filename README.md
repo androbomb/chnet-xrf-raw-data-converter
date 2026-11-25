@@ -73,7 +73,7 @@ ds = with_calibration(ds, 0.00259259, -0.0355556, provenance="xml")  # conteggi 
 ds = rebin(ds, 2)                              # opzionale, esplicito (sum|mean)
 ds = rebin_to(ds, 2048)                        # opzionale: profondità target
 write_dataset(ds, "mappa11.h5", fmt="h5", compress=4)  # o fmt="npz"/"ome"; compress 0-9
-read_ome("mappa11.ome.tif")   # round-trip: OME-TIFF -> Dataset (Y, X, C) + metadati
+read_ome("mappa11.ome.tif")   # round-trip: OME-TIFF -> Dataset (Y, X, C) + metadati (OME-XML XSD 2016-06)
 ```
 
 UI minimale (Dash, DARKLY, accent #4196B4) — la CLI grafica per

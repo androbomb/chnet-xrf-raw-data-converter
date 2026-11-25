@@ -9,7 +9,7 @@ try:
     # mai hardcodato: deriva dai metadati del dist installato (no drift)
     __version__ = _dist_version("chnet-xrf-raw-data-converter")
 except PackageNotFoundError:  # checkout di sorgente non installato
-    __version__ = "0.1.0"
+    __version__ = "0.1.1"
 
 from .dataset import Dataset
 from .data import inspect_raw, read_raw

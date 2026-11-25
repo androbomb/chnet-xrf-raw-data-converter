@@ -2,11 +2,11 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "chnet-xrf-raw-data-converter"
 type: software
-description: "Converter raw MA-XRF (Fi MA-XRF, INFN-CHNet) to NPZ/HDF5: faithful event cube (y, x, channel), energy calibration as attachment, acquisition mask, optional Dash UI."
+description: "Converter raw MA-XRF (Fi MA-XRF, INFN-CHNet) to NPZ/HDF5/OME-TIFF: faithful event cube (y, x, channel), energy calibration as attachment, acquisition mask, optional Dash UI."
 authors:
   - name: "Alessandro Bombini"
-version: 0.1.0
-date-released: 2026-11-18
+version: 0.1.1
+date-released: 2026-11-25
 license: MIT
 repository-code: "https://github.com/androbomb/chnet-xrf-raw-data-converter"
 url: "https://github.com/androbomb/chnet-xrf-raw-data-converter"

@@ -1,8 +1,11 @@
+from importlib.metadata import version
+
 import xrfraw
 
 
 def test_version():
-    assert xrfraw.__version__ == "0.1.0"
+    # equalità col dist installato: becca il drift del fallback in __init__.py
+    assert xrfraw.__version__ == version("chnet-xrf-raw-data-converter")
 
 
 def test_public_api():

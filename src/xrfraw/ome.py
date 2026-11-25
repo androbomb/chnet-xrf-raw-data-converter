@@ -47,7 +47,7 @@ def _ome_xml(ds: Dataset, compress: int) -> str:
     grid = meta["grid"]
     attrs = _attrs(ds, compress)
     if ds.energy is not None:  # asse esplicito (post-rebin) come in H5/NPZ
-        attrs = {**attrs, "energy": ds.energy.tolist()}
+        attrs = {**attrs, "energy_axis": ds.energy.tolist()}
     tds = "".join(f'<TiffData FirstC="{c}" FirstT="0" IFD="{c}" PlaneCount="1"/>'
                   for c in range(nc))
     chans = "".join(f'<Channel ID="Channel:0:{c}" SamplesPerPixel="1"><LightPath/></Channel>'
@@ -140,13 +140,15 @@ def read_ome(path) -> Dataset:
     cal_m = cal_q = None
     energy = None
     calibrated = False
-    if "energy" in attrs:  # asse esplicito (writer con calibrazione, post-rebin)
-        energy = np.asarray(attrs["energy"], dtype=np.float64)
+    axis = attrs.get("energy_axis", attrs.get("energy"))  # "energy" = file 0.1.1
+    if axis is not None:  # asse esplicito (writer con calibrazione, post-rebin)
+        energy = np.asarray(axis, dtype=np.float64)
         if energy.size != nc:
             raise ValueError("stored energy axis does not match SizeC")
     if cal:
-        rb = cal.get("rebinning")  # effective m/q post-rebin (bin-mean)
-        cal_m, cal_q = (rb["m"], rb["q"]) if rb else (cal["m"], cal["q"])
+        # 0.1.1: m/q efficaci gia' post-rebin; v2: m_rebinned/q_rebinned
+        cal_m = cal.get("m_rebinned", cal["m"])
+        cal_q = cal.get("q_rebinned", cal["q"])
         if energy is None:  # file senza asse esplicito: ri-deriva da m/q
             energy = cal_m * channel.astype(np.float64) + cal_q
         calibrated = True

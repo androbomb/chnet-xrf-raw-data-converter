@@ -78,7 +78,7 @@ def test_run_convert_h5_roundtrip(tmp_path):
     with h5py.File(out) as f:
         assert int(f["img"][()].sum()) == N_EVENTS
         assert f.attrs["calibration_m"] == 1.5  # applied from XML when cal=None
-        assert f["energy"].shape == (16,)
+        assert f["energy_axis"].shape == (16,)
         assert json.loads(f.attrs["metadata_json"])["calibration"]["provenance"] == "xml"
 
 

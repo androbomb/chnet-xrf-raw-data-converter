@@ -24,8 +24,9 @@ def test_h5_round_trip_calibrated_rebinned(tmp_path):
     ds = rebin(ds, 2)
     out = write_dataset(ds, tmp_path / "out.h5")
     with h5py.File(out, "r") as f:
-        for k in ("img", "channel", "energy", "x_axis", "y_axis", "mask"):
-            np.testing.assert_array_equal(f[k][()], getattr(ds, k))
+        attr = {"energy_axis": "energy"}  # nome serializzato != nome in memoria
+        for k in ("img", "channel", "energy_axis", "x_axis", "y_axis", "mask"):
+            np.testing.assert_array_equal(f[k][()], getattr(ds, attr.get(k, k)))
         assert f.attrs["n_channels"] == 8
         assert f.attrs["dtype"] == "uint32"
         assert f.attrs["n_events"] == ds.n_events
@@ -40,12 +41,12 @@ def test_h5_round_trip_calibrated_rebinned(tmp_path):
         assert f.attrs["rebin_factor"] == 2
         assert f.attrs["energy_unit"] == "keV"
         assert f.attrs["bin_convention"] == "bin-mean"
-        np.testing.assert_array_equal(f["energy"][()], 3.0 * np.arange(8) + 0.5)
+        np.testing.assert_array_equal(f["energy_axis"][()], 3.0 * np.arange(8) + 0.5)
         assert f.attrs["compression"] == 4  # default gzip level
         meta = json.loads(f.attrs["metadata_json"])
         assert meta["schema_version"] == 2
         assert meta["calibration"]["m"] == 1.5 and meta["calibration"]["q"] == -0.25
-        assert meta["calibration"]["rebinning"]["factor"] == 2
+        assert meta["calibration"]["rebin_factor"] == 2
         assert meta["transforms"] == [{"type": "rebin", "size": 2, "how": "sum",
                                        "n_channels_from": 16, "n_channels_to": 8}]
 
@@ -59,7 +60,7 @@ def test_npz_round_trip_calibrated_rebinned(tmp_path):
     out = write_dataset(ds, tmp_path / "out.npz", fmt="npz")
     z = np.load(out)
     np.testing.assert_array_equal(z["img"], ds.img)
-    np.testing.assert_array_equal(z["energy"], 3.0 * np.arange(8) + 0.5)
+    np.testing.assert_array_equal(z["energy_axis"], 3.0 * np.arange(8) + 0.5)
     assert int(z["img"].sum()) == ds.n_events
     attrs = json.loads(z["attrs"].item())
     assert (attrs["calibration_m"], attrs["calibration_q"]) == (3.0, 0.5)
@@ -88,7 +89,7 @@ def test_npz_round_trip_uncalibrated(tmp_path):
     z = np.load(out)
     for k in ("img", "channel", "x_axis", "y_axis", "mask"):
         np.testing.assert_array_equal(z[k], getattr(ds, k))
-    assert "energy" not in z.files
+    assert "energy_axis" not in z.files
     attrs = json.loads(z["attrs"].item())
     assert attrs["n_channels"] == 16
     assert "calibration_m" not in attrs
@@ -102,7 +103,7 @@ def test_h5_uncalibrated_has_no_energy_or_cal_attrs(tmp_path):
     ds = _uncal_ds(tmp_path)
     out = write_dataset(ds, tmp_path / "o.h5")
     with h5py.File(out, "r") as f:
-        assert "energy" not in f
+        assert "energy_axis" not in f
         assert "calibration_m" not in f.attrs
 
 

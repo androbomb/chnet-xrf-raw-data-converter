@@ -28,7 +28,7 @@ metadati di output): `rebin(size, how=sum|mean)`.
 | ----- | ---------- | ----------- |
 | `img` | (NY, NX, NC) uint32 | conteggi eventi per pixel e canale; ordine **(y, x, channel)** (float64 dopo `rebin(mean)` — dichiarato in `transforms`) |
 | `channel` | (NC,) uint32 | indici ADC originali 0..NC−1 — sempre presente |
-| `energy` | (NC,) float64 | **solo se calibrato**: `energy[i] = m·i + q` (pre-rebin); post-rebin: media delle energie dei bin aggregati (bin-mean) |
+| `energy_axis` | (NC,) float64 | **solo se calibrato**: energia rappresentativa per canale; post-rebin: media delle energie dei bin aggregati (bin-mean), cioè `m_rebinned·i + q_rebinned` (per R=1 coincide con `m·i + q`) |
 | `x_axis` | (NX,) float64 | coordinate spaziali X (unità dai metadati) |
 | `y_axis` | (NY,) float64 | coordinate spaziali Y |
 | `mask` | (NY, NX) bool | maschera di acquisizione: `False` = non acquisito (zero, non misurato) |
@@ -49,9 +49,9 @@ metadati di output): `rebin(size, how=sum|mean)`.
   applicati (dopo `read_raw`, senza `with_calibration`).
 - `calibration`: `{m, q, provenance: "xml"|"external"|"user"}` — solo se
   calibrato (dopo `with_calibration`); dopo un rebin gli originali restano
-  invariati e si aggiunge `rebinning`:
-  `{factor, uniform, m, q, convention: "bin-mean", energy_unit: "keV"}`
-  con `m = R·m₀`, `q = q₀ + (R−1)/2·m₀`.
+  invariati e si affiancano `rebin_factor` (R totale), `rebin_uniform`
+  (bool), `m_rebinned = R·m₀`, `q_rebinned = q₀ + (R−1)/2·m₀`,
+  `convention: "bin-mean"`, `energy_unit: "keV"`.
 - `raw`: tutti i campi XML (A) o i campi esterni (B).
 - `anomalies`: lista delle anomalie di validazione (dangling marker, colonne
   mancanti, …) — nessuna viene corretta silenziosamente. Un canale che
@@ -76,13 +76,14 @@ metadati di output): `rebin(size, how=sum|mean)`.
 - Asse `channel` in output = primo indice di ogni gruppo (`i·size`).
   `n_events` resta il conteggio fisico degli eventi.
 - Calibrazione (se calibrato): gli originali `m₀`/`q₀` restano invariati in
-  `calibration`; la calibrazione post-rebin va in `calibration["rebinning"]`
-  con `m' = R·m₀`, `q' = q₀ + (R−1)/2·m₀` — energia rappresentativa = media
-  delle energie del bin ("bin-mean", keV; per R=1 coincide con l'originale).
-  `energy` contiene le medie per gruppo (float64). `rebin` accetta solo
-  gruppi uniformi (altrimenti errore esplicito): la formula lineare vale
-  solo nel caso uniforme; un eventuale rebin non uniforme porterebbe
-  `uniform: false` e la calibrazione va letta solo dal vettore `energy`.
+  `calibration`; la calibrazione post-rebin è conservata come
+  `m_rebinned = R·m₀`, `q_rebinned = q₀ + (R−1)/2·m₀` — energia rappresentativa
+  = media delle energie del bin ("bin-mean", keV; per R=1 coincide con
+  l'originale). `energy_axis` contiene le medie per gruppo (float64).
+  `rebin` accetta solo gruppi uniformi (altrimenti errore esplicito): la
+  formula lineare vale solo nel caso uniforme; un eventuale rebin non
+  uniforme porterebbe `rebin_uniform: false` e la calibrazione va letta solo
+  dal vettore `energy_axis`.
 - Dichiarato in `transforms` come
   `{type: "rebin", size, how, n_channels_from, n_channels_to}`.
 
@@ -94,7 +95,7 @@ profondità del cubo (es. 16384 → 2048) senza perdere eventi.
 
 ## HDF5 (`<nome>.h5`)
 
-- dataset: `/img`, `/channel`, `/energy` (se calibrato), `/x_axis`, `/y_axis`,
+- dataset: `/img`, `/channel`, `/energy_axis` (se calibrato), `/x_axis`, `/y_axis`,
   `/mask`.
 - attributi su `/`: `format`, `source_file`, `n_channels`, `dtype`,
   `n_events`, `metadata_json` (str), `calibration_m`, `calibration_q`
@@ -107,7 +108,7 @@ profondità del cubo (es. 16384 → 2048) senza perdere eventi.
 
 ## NPZ (`<nome>.npz`)
 
-Array: `img`, `channel`, `energy` (se calibrato), `x_axis`, `y_axis`, `mask`,
+Array: `img`, `channel`, `energy_axis` (se calibrato), `x_axis`, `y_axis`, `mask`,
 più `attrs` (stringa JSON con gli stessi campi scalari dell'HDF5).
 
 ## OME-TIFF / OME-BigTIFF (`<nome>.ome.tif`)
@@ -139,15 +140,15 @@ L'OME-XML è **validato contro lo XSD ufficiale OME 2016-06** (conforme).
       created_utc, compression) + se calibrato: `calibration_m`/
       `calibration_q` (effettivi, post-rebin), `calibration_m_original`/
       `calibration_q_original`, `rebin_factor`, `energy_unit` ("keV"),
-      `bin_convention` ("bin-mean"), `energy`: asse per canale (float64,
-      post-rebin, identico a `/energy` di H5/NPZ);
+      `bin_convention` ("bin-mean"), `energy_axis`: asse per canale (float64,
+       post-rebin, identico a `/energy_axis` di H5/NPZ);
     - `mask` = byte bool compressi zlib+base64.
   - Il non-ASCII dell'XML va in numeric character references (i tag stringa
     TIFF sono 7-bit ASCII).
 - Lettura: `xrfraw.read_ome(path)` ricostruisce `img` in (Y, X, C) e tutti
-  i metadati; `energy` viene presa dall'asse esplicito in `attrs` se
-  presente, altrimenti ri-derivata da m/q (`energy = m·channel + q`,
-  file scritti prima dell'asse esplicito).
+  i metadati; `energy` viene presa dall'asse esplicito `energy_axis` in
+  `attrs` se presente (file 0.1.1: chiave `energy`), altrimenti ri-derivata
+  da m/q (`energy = m·channel + q`, file scritti prima dell'asse esplicito).
 - Interoperabilità: lettura verificata con `tifffile`; qualsiasi reader OME
   vede un'immagine C-stack valida. **La calibrazione custom vive nella
   MapAnnotation `urn:xrfraw:v1` e non è automaticamente comprensibile a

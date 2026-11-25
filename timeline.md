@@ -331,3 +331,15 @@ un mini raw sintico.
   retrocompatibile (i reader ri-derivano sui file 0.1.1). Aggiunti test
   round-trip dei 3 formati + esempio di riferimento (m=0.00373862,
   q=-0.0340262, R=32 → m'=0.11963584, q'=0.02392241).
+- Nomi metadati energetici allineati all'audit (2026-11-25): il blocco
+  `calibration["rebinning"]` è appiattito in `calibration` come
+  `m_rebinned`, `q_rebinned`, `rebin_factor`, `rebin_uniform`, `convention`,
+  `energy_unit` (pipeline condivisa `processing.rebin`); il vettore energetico
+  serializzato si chiama `energy_axis` in tutti e 3 i formati (dataset H5,
+  chiave NPZ, attrs OME). I reader OME restano retrocompatibili: fallback
+  `energy_axis` → `energy` (0.1.1) e m/q efficaci → `cal["m"]/["q"]`
+  (0.1.1 conservava gli efficaci post-rebin). Nuovo test di integrazione
+  `test_exported_energy_metadata_on_disk`: riapre i file esportati (OME con
+  parse diretto del MapAnnotation, NPZ, H5) e verifica numericamente
+  originali/distinti post-rebin, `energy_axis` (512 elem, esatti) e counts
+  sul disco. Doc e test aggiornati.

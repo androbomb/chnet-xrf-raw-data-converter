@@ -9,8 +9,8 @@ Contract (output_schema.md; scientific_notes.md §9-11):
   semantics). Declared in metadata `transforms`. If calibrated, the
   ORIGINAL m/q stay untouched in `calibration`; the post-rebin calibration
   (m' = size*m, q' = q + (size-1)/2*m — representative energy = group mean,
-  "bin-mean", keV) is stored in `calibration["rebinning"]` and `energy`
-  holds the group means.
+  "bin-mean", keV) is stored as `calibration["m_rebinned"]`/`"q_rebinned"]`
+  (+ `rebin_factor`) and `energy` holds the group means.
 - `rebin_to` maps (h, w, N) -> (h, w, n_new) with n_new in {512, 1024, 2048,
   4096, 8192}, sum-only (totals preserved).
 Both return new Datasets; inputs are never mutated (img is shared, not copied).
@@ -58,9 +58,10 @@ def rebin(ds: Dataset, size: int, how: str = "sum") -> Dataset:
     index of each group. If calibrated, the original m/q are preserved
     untouched in ``metadata["calibration"]``; the post-rebin calibration
     ``m' = size*m``, ``q' = q + (size-1)/2*m`` (representative energy =
-    group mean, "bin-mean", keV) is stored in ``calibration["rebinning"]``
-    and ``energy`` holds the group means. ``n_events`` stays the physical
-    event count. Declared in ``transforms``.
+    group mean, "bin-mean", keV) is stored as ``calibration["m_rebinned"]``
+    / ``"q_rebinned"]`` (+ ``rebin_factor``) and ``energy`` holds the group
+    means. ``n_events`` stays the physical event count. Declared in
+    ``transforms``.
     """
     if not isinstance(size, int) or isinstance(size, bool) or size < 2:
         raise ValueError(f"rebin size must be an int >= 2, got {size!r}")
@@ -111,13 +112,12 @@ def rebin(ds: Dataset, size: int, how: str = "sum") -> Dataset:
         # modified; the post-rebin calibration is stored separately.
         energy = m0 * (starts + (size - 1) / 2) + q0
         cal = dict(meta["calibration"])
-        cal["rebinning"] = {
-            "factor": cal.get("rebinning", {}).get("factor", 1) * size,
-            "uniform": True, "m": m0 * size, "q": q0 + (size - 1) / 2 * m0,
-            "convention": "bin-mean", "energy_unit": "keV",
-        }
+        cal.update(rebin_factor=cal.get("rebin_factor", 1) * size,
+                   rebin_uniform=True, m_rebinned=m0 * size,
+                   q_rebinned=q0 + (size - 1) / 2 * m0,
+                   convention="bin-mean", energy_unit="keV")
         meta["calibration"] = cal
-        cal_m, cal_q = cal["rebinning"]["m"], cal["rebinning"]["q"]
+        cal_m, cal_q = cal["m_rebinned"], cal["q_rebinned"]
     meta["transforms"] = list(meta.get("transforms") or []) + [{
         "type": "rebin", "size": size, "how": how,
         "n_channels_from": nc, "n_channels_to": n_out,

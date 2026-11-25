@@ -30,7 +30,7 @@ def test_cli_happy_path_h5_rebin(tmp_path):
         assert img.shape == (2, 3, 8)
         assert int(img.sum()) == 8  # rebin sum preserves totals
         assert f.attrs["calibration_m"] == 3.0  # XML m=1.5, rescaled by rebin 2
-        assert f["energy"][()].shape == (8,)
+        assert f["energy_axis"][()].shape == (8,)
         meta = json.loads(f.attrs["metadata_json"])
         assert meta["transforms"][0]["type"] == "rebin"
 

@@ -148,7 +148,7 @@ def test_rebin_chained_and_calibrated():
     # original calibration untouched, total factor recorded
     cal = out.metadata["calibration"]
     assert (cal["m"], cal["q"]) == (0.25, -0.5)
-    assert cal["rebinning"]["factor"] == 4
+    assert cal["rebin_factor"] == 4
     assert [t["size"] for t in out.metadata["transforms"]] == [2, 2]
     # input not mutated
     assert ds.calibration_m == 0.25
@@ -200,11 +200,10 @@ def test_rebin_calibration_reference_example():
     assert out.calibration_q == pytest.approx(0.02392241)
     cal = out.metadata["calibration"]
     assert (cal["m"], cal["q"]) == (0.00373862, -0.0340262)  # originale intatta
-    rb = cal["rebinning"]
-    assert rb["factor"] == 32 and rb["uniform"] is True
-    assert rb["convention"] == "bin-mean" and rb["energy_unit"] == "keV"
-    assert rb["m"] == pytest.approx(0.11963584)
-    assert rb["q"] == pytest.approx(0.02392241)
+    assert cal["rebin_factor"] == 32 and cal["rebin_uniform"] is True
+    assert cal["convention"] == "bin-mean" and cal["energy_unit"] == "keV"
+    assert cal["m_rebinned"] == pytest.approx(0.11963584)
+    assert cal["q_rebinned"] == pytest.approx(0.02392241)
     np.testing.assert_allclose(out.energy, [0.02392241, 0.14355825])
     assert int(out.img.sum()) == ds.n_events  # sum conserva i totali
 

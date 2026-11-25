@@ -8,9 +8,10 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import pytest
 import tifffile
+import h5py
 
 from _synthetic import GRID32, N_EVENTS, PIXELS, write_format_a, write_format_b
-from xrfraw import read_raw, read_ome, rebin, with_calibration
+from xrfraw import read_raw, read_ome, rebin, rebin_to, with_calibration
 from xrfraw.io import write_dataset
 from xrfraw.ome import write_ome
 
@@ -135,9 +136,67 @@ def test_ome_energy_post_rebin(tmp_path):
     # originale conservata nel metadata, fattore R esplicito
     cal = back.metadata["calibration"]
     assert (cal["m"], cal["q"]) == (1.5, -0.25)
-    assert cal["rebinning"]["factor"] == 4
+    assert cal["rebin_factor"] == 4
     np.testing.assert_array_equal(back.energy, d2.energy)
     assert int(back.img.sum()) == int(d2.img.sum())
+
+
+def test_exported_energy_metadata_on_disk(tmp_path):
+    # integrazione: riapre i file esportati (OME, NPZ, H5) e verifica
+    # numericamente calibrazione, vettore energetico e counts letti dal
+    # disco (non i valori in memoria).
+    p = tmp_path / "a.txt"
+    write_format_a(p, GRID32, PIXELS)
+    m0, q0, R = 0.5, 1.0, 2
+    ds = with_calibration(read_raw(p, n_channels=1024), m0, q0, provenance="user")
+    ds = rebin_to(ds, 512)
+    m1, q1 = R * m0, q0 + (R - 1) / 2 * m0
+    exp = m1 * np.arange(512) + q1
+    ev = int(ds.img.sum())
+
+    write_dataset(ds, tmp_path / "o.ome.tif", fmt="ome")
+    write_dataset(ds, tmp_path / "o.npz", fmt="npz")
+    write_dataset(ds, tmp_path / "o.h5")
+
+    # OME: parse diretto del MapAnnotation serializzato (meta + attrs)
+    with tifffile.TiffFile(str(tmp_path / "o.ome.tif")) as tif:
+        assert tif.is_ome and not tif.is_shaped and len(tif.series) == 1
+        desc = tif.pages[0].description
+        ev_sum = int(np.stack([tif.asarray(i) for i in range(512)]).sum())
+    ann = ET.fromstring(desc).find(f".//{{{_OME}}}MapAnnotation")
+    assert ann is not None
+    items = {m.get("K"): (m.text or "").strip()
+             for m in ann.iter() if m.tag.endswith("}M")}
+    meta = json.loads(items["meta"])
+    attrs = json.loads(items["attrs"])
+    cal = meta["calibration"]
+    assert (cal["m"], cal["q"]) == (m0, q0)  # originali
+    assert cal["m_rebinned"] == pytest.approx(m1)  # post-rebin, distinti
+    assert cal["q_rebinned"] == pytest.approx(q1)
+    assert cal["rebin_factor"] == R
+    assert cal["convention"] == "bin-mean" and cal["energy_unit"] == "keV"
+    np.testing.assert_array_equal(np.asarray(attrs["energy_axis"], dtype=np.float64),
+                                  exp)
+    assert attrs["rebin_factor"] == R
+    assert (attrs["calibration_m"], attrs["calibration_q"]) == (m1, q1)
+    assert (attrs["calibration_m_original"], attrs["calibration_q_original"]) == (m0, q0)
+    assert ev_sum == ev  # counts sul disco
+
+    # NPZ e H5: stessa informazione conservata
+    z = np.load(tmp_path / "o.npz")
+    np.testing.assert_array_equal(z["energy_axis"], exp)
+    a = json.loads(z["attrs"].item())
+    assert (a["calibration_m"], a["calibration_q"]) == (m1, q1)
+    assert a["rebin_factor"] == R
+    assert int(z["img"].sum()) == ev
+    z.close()
+    with h5py.File(tmp_path / "o.h5", "r") as f:
+        np.testing.assert_array_equal(f["energy_axis"][()], exp)
+        assert f.attrs["rebin_factor"] == R
+        assert (f.attrs["calibration_m"], f.attrs["calibration_q"]) == (m1, q1)
+        assert (f.attrs["calibration_m_original"],
+                f.attrs["calibration_q_original"]) == (m0, q0)
+        assert int(f["img"][()].sum()) == ev
 
 
 def test_bigtiff(tmp_path):

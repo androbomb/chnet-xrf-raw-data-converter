@@ -22,7 +22,7 @@ def _arrays(ds: Dataset) -> dict:
     a = {"img": ds.img, "channel": ds.channel,
          "x_axis": ds.x_axis, "y_axis": ds.y_axis, "mask": ds.mask}
     if ds.energy is not None:
-        a["energy"] = ds.energy
+        a["energy_axis"] = ds.energy
     return a
 
 
@@ -42,15 +42,15 @@ def _attrs(ds: Dataset, compress: int) -> dict:
     attrs["compression"] = compress
     cal = meta.get("calibration")
     if cal:
-        # effective m/q over the stored channels; original kept distinct
-        rb = cal.get("rebinning")
-        attrs["calibration_m"] = rb["m"] if rb else cal["m"]
-        attrs["calibration_q"] = rb["q"] if rb else cal["q"]
+        # effective (post-rebin) m/q; original kept distinct. File 0.1.1
+        # hanno m/q gia' efficaci e niente m_rebinned/rebin_factor.
+        attrs["calibration_m"] = cal.get("m_rebinned", cal["m"])
+        attrs["calibration_q"] = cal.get("q_rebinned", cal["q"])
         attrs["calibration_m_original"] = cal["m"]
         attrs["calibration_q_original"] = cal["q"]
-        attrs["rebin_factor"] = rb["factor"] if rb else 1
-        attrs["energy_unit"] = "keV"
-        attrs["bin_convention"] = "bin-mean"  # representative = group mean
+        attrs["rebin_factor"] = cal.get("rebin_factor", 1)
+        attrs["energy_unit"] = cal.get("energy_unit", "keV")
+        attrs["bin_convention"] = cal.get("convention", "bin-mean")
     return attrs
 
 

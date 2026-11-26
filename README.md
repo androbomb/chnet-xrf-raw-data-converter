@@ -129,6 +129,7 @@ Vedi `operational_plan.md` §3.
 | `example.ipynb` | notebook demo: CLI + UI embeddata (Jupyter) |
 | `example-open-converted.ipynb` | aprire i file convertiti: 1 esempio per formato (npz/h5/ome/fits) |
 | `how_to_open_converted.md` | spiega `example-open-converted.ipynb`: ambiente, file, 4 esempi, verifica |
+| `README.en.md` | README inglese = long description PyPI/TestPyPI (`pyproject: readme`) |
 | `user_guide.md` | guida operativa: cosa fare, ingressi, parametri, limiti |
 | `simple_guide.md` | guida utente da zero: install uv, ambiente, UI, notebook Python, CLI (copy-paste) |
 | `deploy/` | ricetta per backend con status verificato / NOT TESTED |

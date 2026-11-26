@@ -364,3 +364,12 @@ un mini raw sintico.
   CTYPE3/ENERGY, cross-formato OME↔FITS↔H5, CLI) + 1 slow E2E reale
   (mappa11 rebin 512 lossless, h.verify strict). Doc: output_schema.md §FITS
   (nota tecnica HDU/WCS/metadata/compressione) + README.
+
+## 2026-11-26 — v0.1.4 (docs): README inglese per PyPI/TestPyPI
+
+Richiesta utente: testo su PyPI/TestPyPI in inglese + sezione lettura file
+convertiti. Nuovo `README.en.md` (EN: cosa fa, formati, install base/[ui]/[fits],
+CLI, API Python, sezione read-back con esempi per i 4 formati npz/h5/ome/fits,
+UI, doc) — `pyproject: readme` ora punta a README.en.md (README.md resta IT,
+front page della repo). Bump 0.1.4: lo 0.1.3 e' gia' su TestPyPI con
+metadati IT e non e' sostituibile; 0.1.3 non e' mai andato su PyPI.

@@ -25,6 +25,12 @@ from flask import Response, send_file
 from ..io import convert_file
 
 ACCENT = "#4196B4"
+# Formati nel dropdown: FITS solo se astropy e' installato (extra [fits]).
+try:
+    import astropy  # noqa: F401
+    _FMTS = ("h5", "npz", "ome", "fits")
+except ImportError:
+    _FMTS = ("h5", "npz", "ome")
 _ACCENT_BTN = {
     "--bs-btn-bg": ACCENT,
     "--bs-btn-border-color": ACCENT,
@@ -109,7 +115,7 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
             ]),
         ]),
         dbc.Navbar(
-            [dbc.NavbarBrand("convert_file: raw (.txt, formato A/B) → .h5 / .npz / .ome.tif")],
+            [dbc.NavbarBrand("convert_file: raw (.txt, formato A/B) → .h5 / .npz / .ome.tif / .fits")],
             color=ACCENT,
         ),
         html.Br(),
@@ -149,8 +155,8 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
         dbc.Row([
             dbc.Col(_field("fmt",
                            dcc.Dropdown(id="in-fmt", value="h5", className="xrfraw-dd",
-                                        options=[{"label": v, "value": v}
-                                                 for v in ("h5", "npz", "ome")])), md=4),
+                                                                    options=[{"label": v, "value": v}
+                                                                             for v in _FMTS])), md=4),
             dbc.Col(_field("n_channels (profondità ESATTA)",
                            dcc.Input(id="in-nc", type="number", value=16384, min=1)), md=4),
             dbc.Col(_field("dtype cubo",
@@ -206,7 +212,8 @@ def build_app(src: str | Path | None = None) -> dash.Dash:
                     "il percorso, non l'upload.", target="in-path", placement="top"),
         dbc.Tooltip("Dove scrivere l'output. Se vuoto: <temp>/xrfraw_ui/<nome_file>_<n_channels>.<fmt> "
                     "(poi Download file).", target="in-out", placement="top"),
-        dbc.Tooltip("Formato output: h5 (HDF5), npz, ome (OME-TIFF).", target="in-fmt", placement="top"),
+        dbc.Tooltip("Formato output: h5 (HDF5), npz, ome (OME-TIFF), fits (FITS — solo se "
+                    "astropy e' installato, extra [fits]).", target="in-fmt", placement="top"),
         dbc.Tooltip("Profondità ESATTA di lettura: l'output è (y, x, n_channels). "
                     "Default strumentale 16384; errore se un canale la supera.",
                     target="in-nc", placement="top"),

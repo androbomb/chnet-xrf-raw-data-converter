@@ -1,6 +1,8 @@
 # To-do — chnet-xrf-raw-data-converter
 
 ## Now
+- [ ] v0.1.3: export/import FITS (fits.py, extra opzionale [fits], CLI/UI)
+      — in corso
 - [x] M1: reader A/B 2-passate + metadati + griglia + validazione + test
       (24 passed: 23 fast + 1 slow sui file reali)
 - [x] M2: processing (with_calibration / rebin esplicito) + invarianze
@@ -17,6 +19,8 @@
       CI workflow pushato (esecuzione UNVERIFIED, repo privato)
 
 ## Later
+- Compressione lossless FITS (CompImageHDU) + verifica compatibilità con
+  reader FITS non-astropy (follow-up v0.1.3)
 - (nessuno — PyPI/TestPyPI restano fuori contratto)
 
 ## Blocked
@@ -40,3 +44,4 @@
 | 2026-11-17 | M5 close: UI minimale Dash | `src/xrfraw/ui/app.py` (build_app: DARKLY, accent #4196B4; input raw/metadata JSON/n_channels/dtype/rebin/m·q/formato; card report validazione + metadati + calibrazione nota; download .h5/.npz); pipeline condivisa `io.convert_file` (CLI + UI, cal None→known_calibration, cal dict→esplicita); `inspect_raw` ora espone `known_calibration` nel report (mirror read_raw); test headless test_ui.py: componenti (16 ids), run_validate (report ok, n_events=8, max_channel 12, cal xml m=1.5; file mancante→eccezione), run_convert h5 (round-trip BytesIO, sum(img)=8, energy (16,), calibration_m 1.5, provenance xml) e npz rebin sum (shape (2,3,8), output uint32 by contract, sum=8, provenance user, transforms[0]=rebin); server smoke: index 200 + 2 callback registrati su /_dash-dependencies (validate→4 output, convert→status+download); deps +dash>=4.5 +dbc>=2.0.4; example.ipynb (jupyter_mode="inline"); suite 47 fast + 2 slow |
 | 2026-11-17 | M6 close: packaging + CI | `uv build` (hatchling) → dist/raw_xrf_to_h5_opener_python-0.1.0-py3-none-any.whl (21 KB) + .tar.gz (79 KB); wheel verificato in venv pulito (scratch, install solo wheel): `xrf-raw-to-h5 --version` → 0.1.0 exit 0; `import xrfraw.ui` + `build_app()` ok (dash/h5py nel wheel come runtime deps); pytest assente nel wheel (dev-only, corretto); `.github/workflows/ci.yml` (setup-uv, `uv python install 3.12`, `uv sync --dev`, `pytest -q` fast; slow auto-skip senza data_example/) pushato — esecuzione **UNVERIFIED** (repo privato: API pubblica 404, no gh CLI in questo ambiente; da controllare su GitHub Actions); deploy/ invariato (status già onesti: uv/pip verificati, docker/apptainer/wslc NOT TESTED); dist/ già gitignored; nessun push PyPI/TestPyPI (contratto) |
 | 2026-11-25 | Feature OME-TIFF/BigTIFF | `ome.py` (write_ome/read_ome): un IFD per canale (CYX, canali = bande `<Channel>` non RGB), OME-XML 2016-06 con PhysicalSizeX/Y (griglia+unità) e MapAnnotation `urn:xrfraw:v1` (meta=metadata_json, attrs scalari, mask zlib+base64); zlib lossless 0-9, BigTIFF auto >4 GB; `write_dataset(fmt="ome")` + CLI `--format ome` (.ome.tif) + UI; `read_ome` round-trip (Y,X,C)+metadati, energy ri-derivata da m/q; 13 test fast + 1 slow E2E reale (16384 IFD identici); nota: OME-XML ASCII 7-bit (charref per µm); interoperabilità calibrazione con Bio-Formats **UNVERIFIED** (non dichiarata) |
+| 2026-11-26 | Feature FITS (export/import, v0.1.3) | `fits.py` (write_fits/read_fits): Primary (C,H,W) BSCALE=1/BZERO=2^15/2^31 per uint16/uint32 (lossless, sentinela 2^32−1), float32 BE→nativo, float64→float32 documentato (JSON invariato); WCS energetico asse 3 (CTYPE3="ENERGY", CRVAL3=q_rebinned, CDELT3=m_rebinned, keV) + assi spaziali (um); XRF_META (JSON versionato completo), MASK (BITPIX 8), ENERGY (float64, solo calibrato); nessuna compressione (CompImageHDU → Later); astropy extra `[fits]` (errore esplicito se assente); write_dataset(fmt="fits") + CLI --format fits + UI (solo con astropy); read_fits → Dataset (Y,X,C)+metadati integrali → cross-formato; 10 test fast (round-trip 3 dtypes, sentinela BZERO, fallback float64, dtype errato, WCS via astropy.wcs allclose 1e-12, ENERGY esatto, non calibrato senza CTYPE3/ENERGY, OME↔FITS↔H5, CLI) + 1 slow E2E reale (mappa11 rebin 512 lossless, h.verify strict) |

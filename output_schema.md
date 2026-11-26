@@ -1,13 +1,14 @@
-# Output schema — NPZ / HDF5 / OME-TIFF comuni
+# Output schema — NPZ / HDF5 / OME-TIFF / FITS
 
 Status: M3 (2026-11-17) — reader A/B + processing + writer NPZ/HDF5
 (`io.write_dataset`) + CLI implementati e testati (43 fast + 2 slow). OME
 (2026-11-25) — export/lettura OME-TIFF/BigTIFF (`ome.py`) integrato e testato.
-Principio:
+FITS (2026-11-26) — export/lettura FITS multi-extension (`fits.py`, astropy
+extra opzionale) integrato e testato. Principio:
 l'output è la rappresentazione **fedele** (lossless) del raw: i conteggi
 non vengono mai modificati dalla calibrazione (element-identical); niente
-auto-rebinning né auto energy-crop. NPZ, HDF5 e OME-TIFF portano gli stessi
-campi logici.
+auto-rebinning né auto energy-crop. NPZ, HDF5, OME-TIFF e FITS portano gli
+stessi campi logici.
 
 ## Pipeline core
 
@@ -15,7 +16,7 @@ campi logici.
 raw (A/B) → inspect_raw      → report validazione (nessuna allocazione)
          → read_raw          → Dataset: img (NY,NX,NC) + assi + mask + metadati
          → with_calibration  → + energy[i] = m·i + q   (conteggi intatti)
-         → write_dataset     → .h5 / .npz / .ome.tif
+         → write_dataset     → .h5 / .npz / .ome.tif / .fits
 ```
 
 Opzionale, esplicito, non di default, **trasformativo** (documentato nei
@@ -154,6 +155,55 @@ L'OME-XML è **validato contro lo XSD ufficiale OME 2016-06** (conforme).
   MapAnnotation `urn:xrfraw:v1` e non è automaticamente comprensibile a
   software XRF generici**: l'interoperabilità della calibrazione con
   Bio-Formats non è verificata e non va dichiarata senza test.
+
+## FITS (`<nome>.fits`)
+
+Contenitore multidimensionale astronomico via `astropy.io.fits` (dipendenza
+opzionale: `pip install chnet-xrf-raw-data-converter[fits]`; senza astropy
+l'errore è esplicito). Il datacube in memoria è **(C, Y, X)** — convenzione
+FITS `NAXIS1=X, NAXIS2=Y, NAXIS3=C`; la lettura lo restituisce (Y, X, C)
+come gli altri formati. Nessun rebinning: nessun aggregazione aggiuntiva.
+
+- **PRIMARY** (`ImageHDU`, non compresso): i conteggi.
+  - Lossless: dtype preservato. uint16/uint32 → `BITPIX=32` +
+    `BSCALE=1` e `BZERO=2^15`/`BZERO=2^31` (convenzione FITS per interi
+    unsigned; lossless incluso il sentinela 2^32−1). float32 →
+    `BITPIX=-32` (FITS big-endian; alla lettura i float sono convertiti
+    in endianness nativa, come gli altri reader). float64 non esiste in
+    FITS: il cubo è scritto come float32 (documentato); il JSON metadata
+    resta invariato e dichiara ancora `dtype: "float64"`. Ogni altro
+    dtype → errore esplicito.
+  - **WCS**: per i file calibrati, l'asse energetico sull'asse 3:
+    `CTYPE3="ENERGY"`, `CRPIX3=1`, `CRVAL3=q_rebinned`,
+    `CDELT3=m_rebinned`, `CUNIT3="keV"` (lineare, esatto: `rebin` accetta
+    solo gruppi uniformi; post-rebin l'energia rappresentativa è bin-mean).
+    Assi spaziali: `CTYPE1/2="X"/"Y"`, `CRPIX=1`, `CRVAL=0`,
+    `CDELT1/2` = passo di griglia, `CUNIT1/2` = unità dei metadati
+    ("µm" → `um`, forma ASCII standard FITS). File non calibrati:
+    nessuna `CTYPE3` e nessuna extension ENERGY.
+  - Provenienza minima: `OBJECT` (basename del sorgente),
+    `INSTRUME="MA-XRF"`, `DATE` (UTC), `SOFTWARE` (xrfraw + versione).
+- **XRF_META** (`BinTableHDU`, 1 riga, 1 colonna stringa `JSON`):
+  `metadata_json` completo e versionato, identico a NPZ/HDF5/OME — senza
+  troncamenti. Fonte canonica dei metadati: l'header porta solo
+  informazioni standard/ridondanti, mai l'unico posto di un campo.
+- **MASK** (`ImageHDU`, `BITPIX=8`, Y×X): maschera di acquisizione, 0/1.
+- **ENERGY** (`BinTableHDU`, colonna `E`, formato `D` = float64): asse
+  esplicito (solo file calibrati; identico a `energy_axis` di H5/NPZ/OME).
+
+Lettura: `xrfraw.read_fits(path)` ricostruisce il `Dataset` in (Y, X, C)
+con metadati integrali (BZERO applicato, big-endian → nativo); da lì il
+`Dataset` si converte a qualsiasi altro formato (NPZ/HDF5/OME ↔ FITS).
+Compatibilità: il file si apre con qualunque reader FITS standard
+(verificato con `astropy` e `h.verify()` strict); i reader non a conoscenza
+di xrfraw vedono una C-stack valida con WCS energetico e ignorano le
+extension custom.
+
+Scalabilità: il cubo è scritto in un unico blocco non compresso (stessa
+semantica di memoria degli writer OME/HDF5: cubo intero residente);
+compressione lossless (`CompImageHDU`) non implementata in v0.1.3,
+valutata come follow-up con verifica di compatibilità con reader
+non-astropy.
 
 ## Convenzioni
 

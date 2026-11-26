@@ -24,8 +24,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("input", help="raw .txt file, or a directory of raw .txt files")
     p.add_argument("-o", "--out-dir", required=True,
                    help="output directory (created if missing)")
-    p.add_argument("--format", choices=("h5", "npz", "ome"), default="h5",
-                   help="output format: h5, npz, ome (OME-TIFF) (default: h5)")
+    p.add_argument("--format", choices=("h5", "npz", "ome", "fits"), default="h5",
+                   help="output format: h5, npz, ome (OME-TIFF), fits (default: h5)")
     p.add_argument("--n-channels", type=int, default=None,
                    help="exact channel depth of the output cube (default: 16384); "
                         "error if the max observed channel exceeds it")

@@ -65,8 +65,8 @@ def write_dataset(ds: Dataset, path, fmt: str = "h5", compress: int = 4,
     if path.exists() and not overwrite:
         raise FileExistsError(f"output already exists: {path} (use overwrite=True)")
     fmt = fmt.lower()
-    if fmt not in ("h5", "npz", "ome"):
-        raise ValueError(f"fmt must be 'h5', 'npz' or 'ome', got {fmt!r}")
+    if fmt not in ("h5", "npz", "ome", "fits"):
+        raise ValueError(f"fmt must be 'h5', 'npz', 'ome' or 'fits', got {fmt!r}")
     if not isinstance(compress, int) or isinstance(compress, bool) or not 0 <= compress <= 9:
         raise ValueError(f"compress must be an int 0..9 (0 = none), got {compress!r}")
 
@@ -83,6 +83,10 @@ def write_dataset(ds: Dataset, path, fmt: str = "h5", compress: int = 4,
         elif fmt == "ome":
             from . import ome  # lazy: ome riusa _attrs da questo modulo
             ome.write_ome(ds, tmp, compress=compress)
+            os.replace(tmp, path)
+        elif fmt == "fits":
+            from . import fits as fits_mod  # lazy: astropy e' extra opzionale
+            fits_mod.write_fits(ds, tmp)  # compress ignorato (compatibilita')
             os.replace(tmp, path)
         else:
             a = _arrays(ds)

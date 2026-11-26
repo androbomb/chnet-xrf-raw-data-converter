@@ -4,6 +4,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import pytest
 from plotly.utils import PlotlyJSONEncoder
 
 from _synthetic import GRID32, N_EVENTS, PIXELS, write_format_a
@@ -97,6 +98,21 @@ def test_run_convert_npz_rebin_explicit_cal(tmp_path):
     assert cal["calibration"]["provenance"] == "user"
     assert cal["transforms"][0]["type"] == "rebin"
     z.close()
+
+
+def test_run_convert_fits_roundtrip(tmp_path):
+    pytest.importorskip("astropy")  # extra [fits]
+    from xrfraw import read_fits
+    p = tmp_path / "a.txt"
+    write_format_a(p, GRID32, PIXELS)
+    out, summary = run_convert(str(p), str(tmp_path / "o.fits"), "fits", 16, "uint32",
+                               None, None, None, None, 4, True)
+    assert out.name == "o.fits" and "calibrato" in summary
+    back = read_fits(out)
+    assert back.img.dtype == np.uint32
+    assert int(back.img.sum()) == N_EVENTS
+    assert back.calibration_m == 1.5  # applicato dall'XML con cal=None
+    assert back.energy is not None and back.energy.shape == (16,)
 
 
 def test_run_convert_default_outpath(tmp_path, monkeypatch):

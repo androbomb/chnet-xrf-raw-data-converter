@@ -1,6 +1,6 @@
 # chnet-xrf-raw-data-converter (import: `xrfraw`)
 
-Convertitore raw MA-XRF (Fi MA-XRF, INFN-CHNet) → NPZ/HDF5/OME-TIFF comuni:
+Convertitore raw MA-XRF (Fi MA-XRF, INFN-CHNet) → NPZ/HDF5/OME-TIFF/FITS comuni:
 datacube di eventi per pixel in ordine **(y, x, channel)**, indici canale ADC,
 assi spaziali, maschera di acquisizione, metadati serializzati, con calibrazione
 energia come **allegato** (`energy[i] = m·i + q`, conteggi element-identical).
@@ -24,7 +24,8 @@ workflow Trusted Publishing in `.github/workflows/`, vedi
 - Nessun auto-rebinning / auto energy-crop (contratto kickstart); rebin
   esplicito (sum/mean) e rebin a profondità target (`rebin_to`) solo su
   richiesta.
-- Scrive `.h5`, `.npz` o `.ome.tif` (OME-TIFF/BigTIFF) con lo stesso schema
+- Scrive `.h5`, `.npz`, `.ome.tif` (OME-TIFF/BigTIFF) o `.fits` (FITS
+  multi-extension, extra opzionale `[fits]` → astropy) con lo stesso schema
   logico — `output_schema.md`.
 - UI minimale Dash (DARKLY, accent #4196B4, embeddabile in Jupyter):
   `from xrfraw.ui import build_app` (sezione UI).
@@ -41,6 +42,7 @@ uv sync
 ```bash
 python -m pip install "chnet-xrf-raw-data-converter[ui]"
 # senza UI: python -m pip install chnet-xrf-raw-data-converter
+# output FITS: python -m pip install "chnet-xrf-raw-data-converter[fits]"
 ```
 
 Dettaglio in `deploy/how_to_deploy_pip.md`.
@@ -51,7 +53,7 @@ CLI (exit code 0 ok / 1 errori di conversione / 2 usage; nessuna overwrite
 silenziosa — `--overwrite` per sostituire):
 
 ```bash
-xrf-raw-to-h5 FILE_OR_DIR -o OUT_DIR --format h5|npz|ome \
+xrf-raw-to-h5 FILE_OR_DIR -o OUT_DIR --format h5|npz|ome|fits \
     [--n-channels N] [--dtype uint32|uint16|float32|float64] [--metadata meta.json] \
     [--rebin N sum|mean] [--rebin-to 512|1024|2048|4096|8192] \
     [--compress 0-9] [--overwrite]
@@ -64,7 +66,7 @@ allegato (`with_calibration`); altrimenti l'output è non calibrato (asse
 API:
 
 ```python
-from xrfraw import inspect_raw, read_raw, with_calibration, rebin, rebin_to
+from xrfraw import inspect_raw, read_raw, read_ome, read_fits, with_calibration, rebin, rebin_to
 from xrfraw.io import write_dataset
 
 report = inspect_raw("mappa11.txt")            # validazione, nessuna allocazione
@@ -72,8 +74,9 @@ ds = read_raw("mappa11.txt")                   # (NY, NX, NC) + assi + mask + me
 ds = with_calibration(ds, 0.00259259, -0.0355556, provenance="xml")  # conteggi intatti
 ds = rebin(ds, 2)                              # opzionale, esplicito (sum|mean)
 ds = rebin_to(ds, 2048)                        # opzionale: profondità target
-write_dataset(ds, "mappa11.h5", fmt="h5", compress=4)  # o fmt="npz"/"ome"; compress 0-9
+write_dataset(ds, "mappa11.h5", fmt="h5", compress=4)  # o fmt="npz"/"ome"/"fits"
 read_ome("mappa11.ome.tif")   # round-trip: OME-TIFF -> Dataset (Y, X, C) + metadati (OME-XML XSD 2016-06)
+read_fits("mappa11.fits")     # round-trip: FITS -> Dataset (Y, X, C) + metadati (richiede l'extra [fits])
 ```
 
 UI minimale (Dash, DARKLY, accent #4196B4) — la CLI grafica per
@@ -91,7 +94,8 @@ app.run(jupyter_mode="inline", jupyter_height=800)  # notebook (vedi example.ipy
 Carica il raw (upload, load from link o path_to_file), espone ogni
 parametro di `convert_file` come input (out_path, fmt, n_channels, dtype,
 metadata, rebin_spec, rebin_to, cal m/q, compress, overwrite), **Convert**
-e **Download file** per l'output `.h5`/`.npz`/`.ome.tif`. Tooltip su ogni campo;
+e **Download file** per l'output `.h5`/`.npz`/`.ome.tif`/`.fits`
+(l'opzione FITS è abilitata solo se astropy è installato). Tooltip su ogni campo;
 spinner (`dcc.Loading`) durante i callback; al click su Convert: status
 immediato "conversione in corso" + tasto disabilitato fino al termine
 (anti doppio-click: un solo Convert alla volta). Upload limitato a
@@ -118,7 +122,7 @@ Vedi `operational_plan.md` §3.
 | `operational_plan.md` | decisioni, milestone, criteri di accettazione, domande aperte |
 | `legacy_audit.md` | problemi legacy verificati + differenze intenzionali |
 | `data_format.md` | grammatica degli input (formati A/B, stream eventi, NC) |
-| `output_schema.md` | schema comune NPZ/HDF5/OME-TIFF |
+| `output_schema.md` | schema comune NPZ/HDF5/OME-TIFF/FITS |
 | `scientific_notes.md` | calibrazione, conteggi, assi, precisione |
 | `to_do.md` | Now/Next/Later/Blocked + verification log |
 | `timeline.md` | storico append-only datato |

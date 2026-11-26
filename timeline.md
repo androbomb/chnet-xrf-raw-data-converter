@@ -343,3 +343,24 @@ un mini raw sintico.
   parse diretto del MapAnnotation, NPZ, H5) e verifica numericamente
   originali/distinti post-rebin, `energy_axis` (512 elem, esatti) e counts
   sul disco. Doc e test aggiornati.
+- FITS export/import (2026-11-26, feature request, v0.1.3): `fits.py`
+  (write_fits/read_fits) — Primary HDU (C,H,W) con BSCALE=1/BZERO=2^15/2^31
+  per uint16/uint32 (lossless incluso sentinela 2^32−1), float32 big-endian
+  → nativo alla lettura; float64 → float32 (documentato, JSON invariato);
+  WCS energetico sull'asse 3 (CTYPE3="ENERGY", CRPIX3=1, CRVAL3=q_rebinned,
+  CDELT3=m_rebinned, CUNIT3="keV" — esatto: rebin solo gruppi uniformi) +
+  assi spaziali (CUNIT µm→"um", forma ASCII standard FITS); extension
+  XRF_META (JSON completo versionato, 1 riga/colonna stringa), MASK
+  (BITPIX 8), ENERGY (colonna D float64, solo calibrato); provenienza minima
+  (OBJECT/INSTRUME/DATE/SOFTWARE). Nessun rebinning aggiuntivo, nessuna
+  compressione (CompImageHDU valutato come follow-up con verifica
+  compatibilità reader non-astropy). astropy = extra opzionale `[fits]`
+  (errore esplicito se assente). Integrazione: write_dataset(fmt="fits"),
+  CLI --format fits, UI (opzione abilitata solo con astropy), read_fits →
+  Dataset (Y,X,C) + metadati integrali → conversione cross-formato gratuita.
+  Test: 10 fast (round-trip uint16/uint32/float32 + sentinela BZERO,
+  fallback float64→float32, dtype non supportato → errore, WCS verificato
+  numericamente con astropy.wcs, ENERGY esatto, non calibrato senza
+  CTYPE3/ENERGY, cross-formato OME↔FITS↔H5, CLI) + 1 slow E2E reale
+  (mappa11 rebin 512 lossless, h.verify strict). Doc: output_schema.md §FITS
+  (nota tecnica HDU/WCS/metadata/compressione) + README.
